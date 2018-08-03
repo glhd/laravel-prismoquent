@@ -11,10 +11,11 @@ class Page extends \Galahad\Prismoquent\Model
 	
 	// Eager load links using Prismic's fetchLinks option
 	protected $with = [];
-
+	
+	// Cast RichText to text or HTML (all other cast types also supported)
 	protected $casts = [
-		'data.meta_description' => 'text', // Cast RichText to text
-		'data.body' => 'html', // Or to HTML
+		'data.meta_description' => 'text',
+		'data.body' => 'html',
 	];
 	
 	// Resolve links as though they were relationships
@@ -24,18 +25,26 @@ class Page extends \Galahad\Prismoquent\Model
 	}
 	
 	// Also supports repeating groups of links
-    public function similarPagesLinkResolver() : Collection
-    {
-        return $this->manyLinks('author');
-    }
+	public function similarPagesLinkResolver() : Collection
+	{
+		return $this->manyLinks('similar_pages.page');
+	}
 }
 
 // Familiar API
-Page::where('document.id', 'W2N5Dx8AAD1TPaYt')->first();
+$page = Page::where('document.id', 'W2N5Dx8AAD1TPaYt')->first();
 
-// But full support for all Prismic predicates
+foreach ($page->similar_pages as $similar_page) {
+	// $similar_page instanceof Page
+}
+
+$author_name = $page->author->name;
+
+// With full support for all Prismic predicates
 Page::where('my.page.body', 'fulltext', 'laravel')->get();
 ```
+
+## Warning: Active Development
 
 This project is still in active development and may have many bugs. Use at your own risk!
 
