@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\JsonEncodingException;
 use Illuminate\Support\Str;
 use JsonSerializable;
 use Prismic\Api;
-use Prismic\Document;
 use RuntimeException;
 
 abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, UrlRoutable
@@ -36,7 +35,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	/**
 	 * The original Prismic document
 	 *
-	 * @var Document
+	 * @var \stdClass
 	 */
 	public $document;
 	
@@ -45,21 +44,14 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 *
 	 * @var string
 	 */
-	protected $api_id;
-	
-	/**
-	 * The number of models to return for pagination.
-	 *
-	 * @var int
-	 */
-	protected $perPage = 20;
+	protected $type;
 	
 	/**
 	 * Create a new Prismoquent model instance.
 	 *
-	 * @param Document $document
+	 * @param \stdClass $document
 	 */
-	public function __construct(Document $document = null)
+	public function __construct($document = null)
 	{
 		if ($document) {
 			$this->setDocument($document);
@@ -119,10 +111,10 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	}
 	
 	/**
-	 * @param \Prismic\Document $document
+	 * @param \stdClass $document
 	 * @return \Galahad\Prismoquent\Model
 	 */
-	public function setDocument(Document $document) : self
+	public function setDocument($document) : self
 	{
 		$this->document = $document;
 		
@@ -137,21 +129,21 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	public function newQuery() : Builder
 	{
 		return (new Builder(static::$api, $this))
-			->whereType($this->getApiId());
+			->whereType($this->getType());
 	}
 	
-	public function newInstance(Document $document)
+	public function newInstance($document)
 	{
 		return new static($document);
 	}
 	
 	/**
-	 * Create a new model instance from a Document retrieved via a Builder
+	 * Create a new model instance from a document retrieved via a Builder
 	 *
-	 * @param Document $document
+	 * @param \stdClass $document
 	 * @return static
 	 */
-	public function newFromBuilder(Document $document)
+	public function newFromBuilder($document)
 	{
 		$model = $this->newInstance($document);
 		
@@ -167,7 +159,6 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function toArray() : array
 	{
-		// FIXME
 		return $this->attributesToArray();
 	}
 	
@@ -208,8 +199,9 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function fresh() : self
 	{
+		/** @noinspection PhpParamsInspection */
 		return $this->newFromBuilder(
-			static::$api->getByUID($this->apiId(), $this->document->getUid())
+			static::$api->getByUID($this->getType(), $this->document->uid)
 		);
 	}
 	
@@ -222,7 +214,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	{
 		/** @noinspection PhpParamsInspection */
 		$this->setDocument(
-			static::$api->getByUID($this->apiId(), $this->document->getUid())
+			static::$api->getByUID($this->getType(), $this->document->uid)
 		);
 		
 		return $this;
@@ -237,7 +229,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	public function is(self $model = null) : bool
 	{
 		return null !== $model
-			&& $this->document->getId() === $model->document->getId();
+			&& $this->document->id === $model->document->id;
 	}
 	
 	/**
@@ -256,13 +248,13 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 *
 	 * @return string
 	 */
-	public function getApiId() : string
+	public function getType() : string
 	{
-		if (null === $this->api_id) {
+		if (null === $this->type) {
 			return str_replace('\\', '', Str::snake(class_basename($this)));
 		}
 		
-		return $this->api_id;
+		return $this->type;
 	}
 	
 	/**
@@ -272,7 +264,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function getKey() : ?string
 	{
-		return $this->document ? $this->document->getId() : null;
+		return $this->document->id ?? null;
 	}
 	
 	/**
@@ -282,7 +274,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function getRouteKey() : ?string
 	{
-		return $this->document ? $this->document->getUid() : null;
+		return $this->document->id ?? null;
 	}
 	
 	/**
@@ -301,39 +293,12 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function resolveRouteBinding($value) : ?self
 	{
-		/** @var Document $document */
-		if ($document = static::$api->getByUID($this->apiId(), $value)) {
+		/** @var \stdClass $document */
+		if ($document = static::$api->getByUID($this->getType(), $value)) {
 			return $this->newFromBuilder($document);
 		}
 		
 		return null;
-	}
-	
-	/**
-	 * Get the number of models to return per page.
-	 *
-	 * @return int
-	 */
-	public function getPerPage() : int
-	{
-		return $this->perPage;
-	}
-	
-	/**
-	 * Set the number of models to return per page.
-	 *
-	 * @param  int $perPage
-	 * @return \Galahad\Prismoquent\Model
-	 */
-	public function setPerPage(int $perPage) : self
-	{
-		if ($perPage > 100) {
-			throw new \InvalidArgumentException('You can only query up to 100 Prismic documents at a time.');
-		}
-		
-		$this->perPage = $perPage;
-		
-		return $this;
 	}
 	
 	/**
@@ -394,7 +359,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function getAttributes()
 	{
-		return (array) $this->document->getData();
+		return (array) $this->document->data;
 	}
 	
 	/**
@@ -584,7 +549,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	{
 		return 'data' === $key
 			? new Data($this)
-			: object_get($this->document->getData(), $key);
+			: object_get($this->document, $key);
 	}
 	
 	/**

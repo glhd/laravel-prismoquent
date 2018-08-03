@@ -560,17 +560,17 @@ class Builder
 	/**
 	 * Add an ordering
 	 *
-	 * @param  string $path
+	 * @param  string $ordering
 	 * @param  string $direction
 	 * @return \Galahad\Prismoquent\Builder
 	 */
-	public function orderBy($path, $direction = 'asc') : self
+	public function orderBy($ordering, $direction = 'asc') : self
 	{
 		if ('desc' === $direction) {
-			$path .= ' desc';
+			$ordering .= ' desc';
 		}
 		
-		$this->orderings[] = $path;
+		$this->orderings[] = $ordering;
 		
 		return $this;
 	}
@@ -853,11 +853,7 @@ class Builder
 	 */
 	public function first() : ?Model
 	{
-		if ($document = $this->take(1)->get()->first()) {
-			return $this->model->newInstance($document);
-		}
-		
-		return null;
+		return $this->take(1)->get()->first();
 	}
 	
 	/**
