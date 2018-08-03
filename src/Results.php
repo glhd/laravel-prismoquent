@@ -8,8 +8,8 @@ use Prismic\Document;
 use Prismic\Response;
 
 /**
- * @method \Prismic\Document|null first(callable $callback = null, $default = null)
- * @method \Prismic\Document[] all()
+ * @method \Galahad\Prismoquent\Model|null first(callable $callback = null, $default = null)
+ * @method \Galahad\Prismoquent\Model[] all()
  */
 class Results extends LengthAwarePaginator
 {
@@ -21,6 +21,7 @@ class Results extends LengthAwarePaginator
 	/**
 	 * Constructor
 	 *
+	 * @param \Galahad\Prismoquent\Model $model
 	 * @param Response $response
 	 */
 	public function __construct(Model $model, Response $response)

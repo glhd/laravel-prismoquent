@@ -8,7 +8,6 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Traits\Macroable;
 use InvalidArgumentException;
 use Prismic\Api;
-use Prismic\Document;
 use Prismic\Predicate;
 use Prismic\Predicates;
 
@@ -669,10 +668,14 @@ class Builder
 	 * @param string $id
 	 * @return null|\Prismic\Document
 	 */
-	public function find($id) : ?Document
+	public function find($id) : ?Model
 	{
-		/** @noinspection PhpIncompatibleReturnTypeInspection */
-		return $this->api->getByID($id);
+		if ($document = $this->api->getByID($id)) {
+			/** @noinspection PhpParamsInspection */
+			return $this->model->newFromBuilder($document);
+		}
+		
+		return null;
 	}
 	
 	/**
@@ -846,11 +849,15 @@ class Builder
 	/**
 	 * Execute the query and get the first result
 	 *
-	 * @return null|\Prismic\Document
+	 * @return null|\Galahad\Prismoquent\Model
 	 */
-	public function first() : ?Document
+	public function first() : ?Model
 	{
-		return $this->take(1)->get()->first();
+		if ($document = $this->take(1)->get()->first()) {
+			return $this->model->newInstance($document);
+		}
+		
+		return null;
 	}
 	
 	/**
