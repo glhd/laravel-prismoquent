@@ -3,13 +3,12 @@
 namespace Galahad\Prismoquent;
 
 use ArrayAccess;
+use DateTime;
 use Illuminate\Contracts\Routing\UrlRoutable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
-use Illuminate\Database\Eloquent\Concerns\GuardsAttributes;
 use Illuminate\Database\Eloquent\Concerns\HasAttributes;
 use Illuminate\Database\Eloquent\Concerns\HasEvents;
-use Illuminate\Database\Eloquent\Concerns\HasTimestamps;
 use Illuminate\Database\Eloquent\Concerns\HidesAttributes;
 use Illuminate\Database\Eloquent\JsonEncodingException;
 use Illuminate\Support\Str;
@@ -20,7 +19,7 @@ use RuntimeException;
 
 abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, UrlRoutable
 {
-	use HasAttributes, HasEvents, HasTimestamps, HidesAttributes, GuardsAttributes;
+	use HasAttributes, HasEvents, HidesAttributes;
 	
 	/**
 	 * The event dispatcher instance.
@@ -110,15 +109,21 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	}
 	
 	/**
+	 * Get the observable event names.
+	 *
+	 * @return array
+	 */
+	public function getObservableEvents()
+	{
+		return array_merge(['retrieved'], $this->observables);
+	}
+	
+	/**
 	 * @param \Prismic\Document $document
 	 * @return \Galahad\Prismoquent\Model
 	 */
 	public function setDocument(Document $document) : self
 	{
-		foreach ($document->getData() as $key => $value) {
-			$this->setAttribute($key, $value);
-		}
-		
 		$this->document = $document;
 		
 		return $this;
@@ -131,7 +136,28 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function newQuery() : Builder
 	{
-		return (new Builder(static::$api))->whereType($this->api_id);
+		return (new Builder(static::$api, $this))
+			->whereType($this->getApiId());
+	}
+	
+	public function newInstance(Document $document)
+	{
+		return new static($document);
+	}
+	
+	/**
+	 * Create a new model instance from a Document retrieved via a Builder
+	 *
+	 * @param Document $document
+	 * @return static
+	 */
+	public function newFromBuilder(Document $document)
+	{
+		$model = $this->newInstance($document);
+		
+		$model->fireModelEvent('retrieved', false);
+		
+		return $model;
 	}
 	
 	/**
@@ -182,8 +208,8 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function fresh() : self
 	{
-		return new static(
-			static::$api->getByUID($this->api_id, $this->document->getUid())
+		return $this->newFromBuilder(
+			static::$api->getByUID($this->apiId(), $this->document->getUid())
 		);
 	}
 	
@@ -196,7 +222,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	{
 		/** @noinspection PhpParamsInspection */
 		$this->setDocument(
-			static::$api->getByUID($this->api_id, $this->document->getUid())
+			static::$api->getByUID($this->apiId(), $this->document->getUid())
 		);
 		
 		return $this;
@@ -233,7 +259,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	public function getApiId() : string
 	{
 		if (null === $this->api_id) {
-			return str_replace('\\', '', Str::snake(Str::plural(class_basename($this))));
+			return str_replace('\\', '', Str::snake(class_basename($this)));
 		}
 		
 		return $this->api_id;
@@ -260,6 +286,14 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	}
 	
 	/**
+	 * @return string
+	 */
+	public function getRouteKeyName() : string
+	{
+		return 'uid';
+	}
+	
+	/**
 	 * Retrieve the model for a bound value.
 	 *
 	 * @param  mixed $value
@@ -268,8 +302,8 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	public function resolveRouteBinding($value) : ?self
 	{
 		/** @var Document $document */
-		if ($document = static::$api->getByUID($this->api_id, $value)) {
-			return new static($document);
+		if ($document = static::$api->getByUID($this->apiId(), $value)) {
+			return $this->newFromBuilder($document);
 		}
 		
 		return null;
@@ -300,6 +334,109 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 		$this->perPage = $perPage;
 		
 		return $this;
+	}
+	
+	/**
+	 * Get attribute value
+	 *
+	 * @param $key
+	 * @return mixed|null
+	 */
+	public function getAttribute($key)
+	{
+		if (!$key) {
+			return null;
+		}
+		
+		return $this->getAttributeValue($key);
+	}
+	
+	/**
+	 * Determine if a get mutator exists for an attribute.
+	 *
+	 * @param  string $key
+	 * @return bool
+	 */
+	public function hasGetMutator($key)
+	{
+		$mutator_key = str_replace('.', '_', $key);
+		return method_exists($this, 'get'.Str::studly($mutator_key).'Attribute');
+	}
+	
+	/**
+	 * Set a given attribute on the model.
+	 *
+	 * @param  string $key
+	 * @param  mixed $value
+	 * @return mixed
+	 */
+	public function setAttribute($key, $value)
+	{
+		throw new RuntimeException('Prismoquent models are read-only.');
+	}
+	
+	/**
+	 * Set a given JSON attribute on the model.
+	 *
+	 * @param  string $key
+	 * @param  mixed $value
+	 * @return $this
+	 */
+	public function fillJsonAttribute($key, $value)
+	{
+		throw new RuntimeException('Prismoquent models are read-only.');
+	}
+	
+	/**
+	 * Get all of the current attributes on the model.
+	 *
+	 * @return array
+	 */
+	public function getAttributes()
+	{
+		return (array) $this->document->getData();
+	}
+	
+	/**
+	 * Set the array of model attributes. No checking is done.
+	 *
+	 * @param  array $attributes
+	 * @param  bool $sync
+	 * @return $this
+	 */
+	public function setRawAttributes(array $attributes, $sync = false)
+	{
+		throw new RuntimeException('Prismoquent models are read-only.');
+	}
+	
+	/**
+	 * Get the attributes that should be converted to dates.
+	 *
+	 * @return array
+	 */
+	public function getDates()
+	{
+		return array_unique(array_merge($this->dates, ['first_publication_date', 'last_publication_date']));
+	}
+	
+	/**
+	 * Get the format for database stored dates.
+	 *
+	 * @return string
+	 */
+	public function getDateFormat()
+	{
+		return DateTime::ISO8601;
+	}
+	
+	/**
+	 * Tell HasAttributes to not try to handle auto-increment on this
+	 *
+	 * @return bool
+	 */
+	public function getIncrementing()
+	{
+		return false;
 	}
 	
 	/**
@@ -412,5 +549,52 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	public function __toString()
 	{
 		return $this->toJson();
+	}
+	
+	/**
+	 * Get the value of an attribute using its mutator.
+	 *
+	 * @param  string $key
+	 * @param  mixed $value
+	 * @return mixed
+	 */
+	protected function mutateAttribute($key, $value)
+	{
+		$mutator_key = str_replace('.', '_', $key);
+		return $this->{'get'.Str::studly($mutator_key).'Attribute'}($value);
+	}
+	
+	/**
+	 * Get an attribute array of all arrayable attributes.
+	 *
+	 * @return array
+	 */
+	protected function getArrayableAttributes()
+	{
+		return $this->getArrayableItems($this->getAttributes());
+	}
+	
+	/**
+	 * Get an attribute from the $attributes array.
+	 *
+	 * @param  string $key
+	 * @return mixed
+	 */
+	protected function getAttributeFromArray($key)
+	{
+		return 'data' === $key
+			? new Data($this)
+			: object_get($this->document->getData(), $key);
+	}
+	
+	/**
+	 * Get an array attribute or return an empty array if it is not set.
+	 *
+	 * @param  string $key
+	 * @return array
+	 */
+	protected function getArrayAttributeByKey($key)
+	{
+		return $this->getAttributeFromArray($key);
 	}
 }

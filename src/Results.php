@@ -3,6 +3,8 @@
 namespace Galahad\Prismoquent;
 
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use Prismic\Document;
 use Prismic\Response;
 
 /**
@@ -21,10 +23,15 @@ class Results extends LengthAwarePaginator
 	 *
 	 * @param Response $response
 	 */
-	public function __construct(Response $response)
+	public function __construct(Model $model, Response $response)
 	{
+		$items = Collection::make($response->getResults())
+			->map(function(Document $document) use ($model) {
+				return $model->newInstance($document);
+			});
+		
 		parent::__construct(
-			$response->getResults(),
+			$items,
 			$response->getTotalResultsSize(),
 			$response->getResultsPerPage(),
 			$response->getPage()

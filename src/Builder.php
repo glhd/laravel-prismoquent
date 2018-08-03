@@ -78,13 +78,20 @@ class Builder
 	protected $api;
 	
 	/**
+	 * @var \Galahad\Prismoquent\Model
+	 */
+	protected $model;
+	
+	/**
 	 * Create a new query builder instance.
 	 *
 	 * @param Api $api
+	 * @param \Galahad\Prismoquent\Model $model
 	 */
-	public function __construct(Api $api)
+	public function __construct(Api $api, Model $model)
 	{
 		$this->api = $api;
+		$this->model = $model;
 	}
 	
 	/**
@@ -115,7 +122,7 @@ class Builder
 				: $this->whereMissing($path);
 		}
 		
-		$this->predicates[] = Predicates::$predicate($value);
+		$this->query[] = Predicates::$predicate($path, $value);
 		
 		return $this;
 	}
@@ -216,7 +223,7 @@ class Builder
 	 */
 	public function addPredicate(Predicate $predicate) : self
 	{
-		$this->predicates[] = $predicate;
+		$this->query[] = $predicate;
 		
 		return $this;
 	}
@@ -234,7 +241,7 @@ class Builder
 			$values = $values->toArray();
 		}
 		
-		$this->predicates[] = Predicates::in($path, $values);
+		$this->query[] = Predicates::in($path, $values);
 		
 		return $this;
 	}
@@ -258,7 +265,7 @@ class Builder
 	 */
 	public function whereMissing($path) : self
 	{
-		$this->predicates[] = Predicates::missing($path);
+		$this->query[] = Predicates::missing($path);
 		
 		return $this;
 	}
@@ -271,7 +278,7 @@ class Builder
 	 */
 	public function whereHas($path) : self
 	{
-		$this->predicates[] = Predicates::has($path);
+		$this->query[] = Predicates::has($path);
 		
 		return $this;
 	}
@@ -309,7 +316,7 @@ class Builder
 	 */
 	public function whereInRange($path, $lower_limit, $upper_limit) : self
 	{
-		$this->predicates[] = Predicates::inRange($path, $lower_limit, $upper_limit);
+		$this->query[] = Predicates::inRange($path, $lower_limit, $upper_limit);
 		
 		return $this;
 	}
@@ -323,7 +330,7 @@ class Builder
 	 */
 	public function whereDateAfter($path, $value) : self
 	{
-		$this->predicates[] = Predicates::dateAfter($path, $value);
+		$this->query[] = Predicates::dateAfter($path, $value);
 		
 		return $this;
 	}
@@ -337,7 +344,7 @@ class Builder
 	 */
 	public function whereDateBefore($path, $value) : self
 	{
-		$this->predicates[] = Predicates::dateBefore($path, $value);
+		$this->query[] = Predicates::dateBefore($path, $value);
 		
 		return $this;
 	}
@@ -352,7 +359,7 @@ class Builder
 	 */
 	public function whereDateBetween($path, $before, $after) : self
 	{
-		$this->predicates[] = Predicates::dateBetween($path, $before, $after);
+		$this->query[] = Predicates::dateBetween($path, $before, $after);
 		
 		return $this;
 	}
@@ -366,7 +373,7 @@ class Builder
 	 */
 	public function whereDayOfMonth($path, $value = null) : self
 	{
-		$this->predicates[] = Predicates::dayOfMonth($path, $value);
+		$this->query[] = Predicates::dayOfMonth($path, $value);
 		
 		return $this;
 	}
@@ -380,7 +387,7 @@ class Builder
 	 */
 	public function whereDayOfMonthAfter($path, $value) : self
 	{
-		$this->predicates[] = Predicates::dayOfMonthAfter($path, $value);
+		$this->query[] = Predicates::dayOfMonthAfter($path, $value);
 		
 		return $this;
 	}
@@ -394,7 +401,7 @@ class Builder
 	 */
 	public function whereDayOfMonthBefore($path, $value) : self
 	{
-		$this->predicates[] = Predicates::dayOfMonthBefore($path, $value);
+		$this->query[] = Predicates::dayOfMonthBefore($path, $value);
 		
 		return $this;
 	}
@@ -408,7 +415,7 @@ class Builder
 	 */
 	public function whereDayOfWeek($path, $value) : self
 	{
-		$this->predicates[] = Predicates::dayOfWeek($path, $value);
+		$this->query[] = Predicates::dayOfWeek($path, $value);
 		
 		return $this;
 	}
@@ -422,7 +429,7 @@ class Builder
 	 */
 	public function whereDayOfWeekAfter($path, $value) : self
 	{
-		$this->predicates[] = Predicates::dayOfWeekAfter($path, $value);
+		$this->query[] = Predicates::dayOfWeekAfter($path, $value);
 		
 		return $this;
 	}
@@ -436,7 +443,7 @@ class Builder
 	 */
 	public function whereDayOfWeekBefore($path, $value) : self
 	{
-		$this->predicates[] = Predicates::dayOfWeekBefore($path, $value);
+		$this->query[] = Predicates::dayOfWeekBefore($path, $value);
 		
 		return $this;
 	}
@@ -450,7 +457,7 @@ class Builder
 	 */
 	public function whereMonth($path, $value) : self
 	{
-		$this->predicates[] = Predicates::month($path, $value);
+		$this->query[] = Predicates::month($path, $value);
 		
 		return $this;
 	}
@@ -464,7 +471,7 @@ class Builder
 	 */
 	public function whereMonthAfter($path, $value) : self
 	{
-		$this->predicates[] = Predicates::monthAfter($path, $value);
+		$this->query[] = Predicates::monthAfter($path, $value);
 		
 		return $this;
 	}
@@ -478,7 +485,7 @@ class Builder
 	 */
 	public function whereMonthBefore($path, $value) : self
 	{
-		$this->predicates[] = Predicates::monthBefore($path, $value);
+		$this->query[] = Predicates::monthBefore($path, $value);
 		
 		return $this;
 	}
@@ -492,7 +499,7 @@ class Builder
 	 */
 	public function whereYear($path, $value) : self
 	{
-		$this->predicates[] = Predicates::year($path, $value);
+		$this->query[] = Predicates::year($path, $value);
 		
 		return $this;
 	}
@@ -506,7 +513,7 @@ class Builder
 	 */
 	public function whereHour($path, $value) : self
 	{
-		$this->predicates[] = Predicates::hour($path, $value);
+		$this->query[] = Predicates::hour($path, $value);
 		
 		return $this;
 	}
@@ -520,7 +527,7 @@ class Builder
 	 */
 	public function whereHourAfter($path, $value) : self
 	{
-		$this->predicates[] = Predicates::hourAfter($path, $value);
+		$this->query[] = Predicates::hourAfter($path, $value);
 		
 		return $this;
 	}
@@ -534,7 +541,7 @@ class Builder
 	 */
 	public function whereHourBefore($path, $value) : self
 	{
-		$this->predicates[] = Predicates::hourBefore($path, $value);
+		$this->query[] = Predicates::hourBefore($path, $value);
 		
 		return $this;
 	}
@@ -702,7 +709,7 @@ class Builder
 		}
 		
 		/** @noinspection PhpParamsInspection */
-		return new Results($this->api->query($this->predicates, $opts));
+		return new Results($this->model, $this->api->query($this->query, $opts));
 	}
 	
 	/**
@@ -742,7 +749,7 @@ class Builder
 	 */
 	public function newQuery() : self
 	{
-		return new static($this->api);
+		return new static($this->api, $this->model);
 	}
 	
 	/**
