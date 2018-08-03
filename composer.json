@@ -1,0 +1,49 @@
+{
+  "name": "glhd/laravel-prismoquent",
+  "description": "Prismoquent lets you access Prismic.io using the same methods you're used to in Eloquent.",
+  "keywords": [
+    "prismic",
+    "prismic.io",
+    "laravel"
+  ],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Chris Morrell"
+    }
+  ],
+  "require": {
+    "php": ">=7.1",
+    "illuminate/database": "~5.6",
+    "illuminate/pagination": "^5.6",
+    "illuminate/support": "~5.6",
+    "prismic/php-sdk": "^3.4"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "~6.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Galahad\\Prismoquent\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "aliases": {
+        "Prismic": "Galahad\\Prismoquent\\Facades\\Prismic"
+      },
+      "providers": [
+        "Galahad\\Prismoquent\\PrismicServiceProvider"
+      ]
+    }
+  },
+  "config": {
+    "sort-packages": true
+  },
+  "prefer-stable": true
+}
