@@ -9,16 +9,21 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Database\Eloquent\Concerns\HasAttributes;
 use Illuminate\Database\Eloquent\Concerns\HasEvents;
+use Illuminate\Database\Eloquent\Concerns\HasRelationships;
 use Illuminate\Database\Eloquent\Concerns\HidesAttributes;
 use Illuminate\Database\Eloquent\JsonEncodingException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use JsonSerializable;
 use Prismic\Api;
 use RuntimeException;
 
+/**
+ * @mixin \Galahad\Prismoquent\Builder
+ */
 abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, UrlRoutable
 {
-	use HasAttributes, HasEvents, HidesAttributes;
+	use HasAttributes, HasRelationships, HasEvents, HidesAttributes;
 	
 	/**
 	 * The event dispatcher instance.
@@ -47,6 +52,13 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	protected $type;
 	
 	/**
+	 * Links to always eager load
+	 *
+	 * @var array
+	 */
+	protected $with = [];
+	
+	/**
 	 * Create a new Prismoquent model instance.
 	 *
 	 * @param \stdClass $document
@@ -63,7 +75,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 *
 	 * @param Api $api
 	 */
-	public static function setApi(Api $api) : void
+	public static function setApi(Prismoquent $api) : void
 	{
 		static::$api = $api;
 	}
@@ -89,6 +101,29 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	}
 	
 	/**
+	 * Find model by ID
+	 *
+	 * @param $id
+	 * @return \Galahad\Prismoquent\Model|null
+	 */
+	public static function find($id) : ?self
+	{
+		return static::query()->find($id);
+	}
+	
+	/**
+	 * Find model by UID/slug
+	 *
+	 * @param $uid
+	 * @return \Galahad\Prismoquent\Model|null
+	 */
+	public static function findByUID($uid) : ?self
+	{
+		$instance = new static();
+		return $instance->newQuery()->findByUID($instance->getType(), $uid);
+	}
+	
+	/**
 	 * Handle dynamic static method calls into the method.
 	 *
 	 * @param  string $method
@@ -98,6 +133,19 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	public static function __callStatic($method, $parameters)
 	{
 		return (new static())->$method(...$parameters);
+	}
+	
+	/**
+	 * Begin querying a model with eager loading links
+	 *
+	 * @param  array|string $relations
+	 * @return \Galahad\Prismoquent\Builder
+	 */
+	public static function with($relations) : Builder
+	{
+		return static::query()->with(
+			is_string($relations) ? func_get_args() : $relations
+		);
 	}
 	
 	/**
@@ -129,9 +177,16 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	public function newQuery() : Builder
 	{
 		return (new Builder(static::$api, $this))
+			->with($this->with)
 			->whereType($this->getType());
 	}
 	
+	/**
+	 * Create a new instance of the given model
+	 *
+	 * @param object $document
+	 * @return static
+	 */
 	public function newInstance($document)
 	{
 		return new static($document);
@@ -140,7 +195,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	/**
 	 * Create a new model instance from a document retrieved via a Builder
 	 *
-	 * @param \stdClass $document
+	 * @param \stdClass|\Prismic\Prismic $document
 	 * @return static
 	 */
 	public function newFromBuilder($document)
@@ -150,6 +205,38 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 		$model->fireModelEvent('retrieved', false);
 		
 		return $model;
+	}
+	
+	/**
+	 * Eager load relations on the model.
+	 *
+	 * @param  array|string $relations
+	 * @return $this
+	 */
+	public function load($relations)
+	{
+		$query = $this->newQueryWithoutRelationships()->with(
+			is_string($relations) ? func_get_args() : $relations
+		);
+		
+		$query->eagerLoadRelations([$this]);
+		
+		return $this;
+	}
+	
+	/**
+	 * Eager load relations on the model if they are not already eager loaded.
+	 *
+	 * @param  array|string $relations
+	 * @return $this
+	 */
+	public function loadMissing($relations)
+	{
+		$relations = is_string($relations) ? func_get_args() : $relations;
+		
+		$this->newCollection([$this])->loadMissing($relations);
+		
+		return $this;
 	}
 	
 	/**
@@ -199,10 +286,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function fresh() : self
 	{
-		/** @noinspection PhpParamsInspection */
-		return $this->newFromBuilder(
-			static::$api->getByUID($this->getType(), $this->document->uid)
-		);
+		return $this->newQuery()->findByUID($this->getType(), $this->document->uid);
 	}
 	
 	/**
@@ -213,9 +297,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	public function refresh() : self
 	{
 		/** @noinspection PhpParamsInspection */
-		$this->setDocument(
-			static::$api->getByUID($this->getType(), $this->document->uid)
-		);
+		$this->setDocument($this->fresh()->document);
 		
 		return $this;
 	}
@@ -293,12 +375,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function resolveRouteBinding($value) : ?self
 	{
-		/** @var \stdClass $document */
-		if ($document = static::$api->getByUID($this->getType(), $value)) {
-			return $this->newFromBuilder($document);
-		}
-		
-		return null;
+		return $this->newQuery()->findByUID($this->getType(), $value);
 	}
 	
 	/**
@@ -313,7 +390,15 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 			return null;
 		}
 		
-		return $this->getAttributeValue($key);
+		// Unlike Eloquent, where relationships are loaded via a column with
+		// a separate name, Prismic links are likely to share the desired name.
+		// We use the 'LinkResolver' suffix, and look for relationships first
+		// to address this (otherwise getAttribute would almost always hit first.
+		if ($related = $this->getRelationValue("{$key}LinkResolver")) {
+			return $related;
+		}
+		
+		return $this->getAttributeValue($key) ?? $this->getAttributeValue("data.{$key}");
 	}
 	
 	/**
@@ -517,6 +602,44 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	}
 	
 	/**
+	 * Resolve a link as a relationship
+	 *
+	 * @param  string $method
+	 * @return mixed
+	 *
+	 * @throws \LogicException
+	 */
+	protected function getRelationshipFromMethod($method)
+	{
+		$relation = $this->$method();
+		
+		if ($relation instanceof Collection) {
+			$this->validateRelationType($method, $relation->first());
+		} else {
+			$this->validateRelationType($method, $relation);
+		}
+		
+		$this->setRelation($method, $relation);
+		
+		return $relation;
+	}
+	
+	/**
+	 * Ensure that the relation either returns a Model or a Collection of models
+	 *
+	 * @param $method
+	 * @param $relation
+	 */
+	protected function validateRelationType($method, $relation) : void
+	{
+		if (!$relation instanceof self) {
+			throw new \LogicException(sprintf(
+				'%s::%s must return a Prismoquent model instance.', static::class, $method
+			));
+		}
+	}
+	
+	/**
 	 * Get the value of an attribute using its mutator.
 	 *
 	 * @param  string $key
@@ -561,5 +684,40 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	protected function getArrayAttributeByKey($key)
 	{
 		return $this->getAttributeFromArray($key);
+	}
+	
+	protected function oneLink($path, $class_name = null)
+	{
+		$link = object_get($this->document, "data.{$path}");
+		
+		return $this->resolveLink($link, $class_name);
+	}
+	
+	protected function manyLinks($path, $class_name = null) : Collection
+	{
+		$segments = explode('.', $path);
+		$link_key = array_pop($segments);
+		$group_path = implode('.', $segments);
+		
+		return Collection::make(object_get($this->document, "data.{$group_path}"))
+			->map(function($group) use ($link_key, $class_name) {
+				return $this->resolveLink($group->$link_key, $class_name);
+			});
+	}
+	
+	protected function resolveLink($link, $class_name = null) : ?self
+	{
+		/** @var self $model_class */
+		$model_class = $class_name ?? $this->inferLinkClassName($link->type);
+		
+		return $model_class::find($link->id);
+	}
+	
+	protected function inferLinkClassName($type) : string
+	{
+		$namespace = substr(static::class, 0, strrpos(static::class, '\\'));
+		$class_name = studly_case($type);
+		
+		return "{$namespace}\\{$class_name}";
 	}
 }

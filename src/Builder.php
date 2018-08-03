@@ -5,6 +5,8 @@ namespace Galahad\Prismoquent;
 use BadMethodCallException;
 use DateTime;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Support\Debug\Dumper;
+use Illuminate\Support\HigherOrderTapProxy;
 use Illuminate\Support\Traits\Macroable;
 use InvalidArgumentException;
 use Prismic\Api;
@@ -58,6 +60,13 @@ class Builder
 	public $orderings = [];
 	
 	/**
+	 * Links to eager load
+	 *
+	 * @var string[]
+	 */
+	public $fetchLinks = [];
+	
+	/**
 	 * Page to retrieve
 	 *
 	 * @var int
@@ -72,7 +81,7 @@ class Builder
 	public $page_size = 20;
 	
 	/**
-	 * @var Api
+	 * @var \Galahad\Prismoquent\Prismoquent
 	 */
 	protected $api;
 	
@@ -87,7 +96,7 @@ class Builder
 	 * @param Api $api
 	 * @param \Galahad\Prismoquent\Model $model
 	 */
-	public function __construct(Api $api, Model $model)
+	public function __construct(Prismoquent $api, Model $model)
 	{
 		$this->api = $api;
 		$this->model = $model;
@@ -670,12 +679,19 @@ class Builder
 	 */
 	public function find($id) : ?Model
 	{
-		if ($document = $this->api->getByID($id)) {
-			/** @noinspection PhpParamsInspection */
-			return $this->model->newFromBuilder($document);
-		}
-		
-		return null;
+		return $this->where('document.id', 'at', $id)->first();
+	}
+	
+	/**
+	 * Find a content type by UID/slug
+	 *
+	 * @param $type
+	 * @param $uid
+	 * @return \Galahad\Prismoquent\Model|null
+	 */
+	public function findByUID($type, $uid) : ?Model
+	{
+		return $this->where("my.{$type}.uid", 'at', $uid)->first();
 	}
 	
 	/**
@@ -696,11 +712,42 @@ class Builder
 	}
 	
 	/**
+	 * Set the links that should be eager loaded
+	 *
+	 * @param  mixed  $links
+	 * @return \Galahad\Prismoquent\Builder
+	 */
+	public function with($links) : self
+	{
+		$this->fetchLinks = array_merge($this->fetchLinks, $links);
+		
+		return $this;
+	}
+	
+	/**
 	 * Execute the query
 	 *
 	 * @return \Galahad\Prismoquent\Results
 	 */
 	public function get() : Results
+	{
+		/** @noinspection PhpParamsInspection */
+		return new Results($this->model, $this->api->query($this->query, $this->opts()));
+	}
+	
+	public function dump() : self
+	{
+		$dumper = new Dumper();
+		
+		/** @noinspection ForgottenDebugOutputInspection */
+		(new HigherOrderTapProxy($dumper))
+			->dump($this->query)
+			->dump($this->opts());
+		
+		return $this;
+	}
+	
+	protected function opts() : array
 	{
 		$opts = [
 			'pageSize' => $this->page_size,
@@ -711,8 +758,11 @@ class Builder
 			$opts['orderings'] = '['.implode(', ', $this->orderings).']';
 		}
 		
-		/** @noinspection PhpParamsInspection */
-		return new Results($this->model, $this->api->query($this->query, $opts));
+		if (!empty($this->fetchLinks)) {
+			$opts['fetchLinks'] = implode(', ', $this->fetchLinks);
+		}
+		
+		return $opts;
 	}
 	
 	/**
