@@ -16,6 +16,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use JsonSerializable;
 use Prismic\Api;
+use Prismic\Dom\RichText;
 use RuntimeException;
 
 /**
@@ -23,7 +24,9 @@ use RuntimeException;
  */
 abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializable, UrlRoutable
 {
-	use HasAttributes, HasRelationships, HasEvents, HidesAttributes;
+	use HasRelationships, HasEvents, HidesAttributes, HasAttributes {
+		castAttribute as eloquentCastAttribute;
+	}
 	
 	/**
 	 * The event dispatcher instance.
@@ -33,7 +36,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	protected static $dispatcher;
 	
 	/**
-	 * @var Api
+	 * @var \Galahad\Prismoquent\Prismoquent
 	 */
 	protected static $api;
 	
@@ -57,6 +60,13 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 * @var array
 	 */
 	protected $with = [];
+	
+	/**
+	 * Fields that should be automatically serialized to HTML
+	 *
+	 * @var array
+	 */
+	protected $html = [];
 	
 	/**
 	 * Create a new Prismoquent model instance.
@@ -398,7 +408,34 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 			return $related;
 		}
 		
-		return $this->getAttributeValue($key) ?? $this->getAttributeValue("data.{$key}");
+		$value = $this->getAttributeValue($key) ?? $this->getAttributeValue("data.{$key}");
+		
+		return $value;
+	}
+	
+	/**
+	 * Cast an attribute to a native PHP type.
+	 *
+	 * @param  string  $key
+	 * @param  mixed  $value
+	 * @return mixed
+	 */
+	protected function castAttribute($key, $value)
+	{
+		if (null === $value) {
+			return $value;
+		}
+		
+		switch ($this->getCastType($key)) {
+			case 'html':
+				return static::$api->html($value);
+				
+			case 'text':
+				return RichText::asText($value);
+			
+			default:
+				return $this->eloquentCastAttribute($key, $value);
+		}
 	}
 	
 	/**

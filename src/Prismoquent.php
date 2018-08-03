@@ -2,8 +2,11 @@
 
 namespace Galahad\Prismoquent;
 
+use Galahad\Prismoquent\Support\HtmlSerializer;
 use Galahad\Prismoquent\Support\LinkResolver;
+use Illuminate\Support\HtmlString;
 use Prismic\Api;
+use Prismic\Dom\RichText;
 
 /**
  * @mixin \Prismic\Api
@@ -31,22 +34,37 @@ class Prismoquent
 	protected $config;
 	
 	/**
+	 * @var \Galahad\Prismoquent\Support\HtmlSerializer|callable
+	 */
+	protected $serializer;
+	
+	/**
 	 * Constructor
 	 *
 	 * @param array $config
 	 * @param \Galahad\Prismoquent\Support\LinkResolver $resolver
+	 * @param \Galahad\Prismoquent\Support\HtmlSerializer $serializer
 	 * @param string $default_url
 	 */
-	public function __construct(array $config, LinkResolver $resolver, string $default_url)
+	public function __construct(array $config, LinkResolver $resolver, HtmlSerializer $serializer, string $default_url)
 	{
+		$this->config = $config;
+		
 		$this->setResolver($resolver);
 		$this->setDefaultUrl($default_url);
-		$this->config = $config;
+		$this->setSerializer($serializer);
 	}
 	
 	public function setResolver(\Prismic\LinkResolver $resolver) : self
 	{
 		$this->resolver = $resolver;
+		
+		return $this;
+	}
+	
+	public function setSerializer(callable $serializer) : self
+	{
+		$this->serializer = $serializer;
 		
 		return $this;
 	}
@@ -66,6 +84,11 @@ class Prismoquent
 	public function previewSession($token) : string
 	{
 		return $this->api->previewSession($token, $this->resolver, $this->default_url);
+	}
+	
+	public function html($field) : HtmlString
+	{
+		return new HtmlString(RichText::asHtml($field, $this->resolver, $this->serializer));
 	}
 	
 	/**

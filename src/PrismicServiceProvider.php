@@ -2,6 +2,7 @@
 
 namespace Galahad\Prismoquent;
 
+use Galahad\Prismoquent\Support\HtmlSerializer;
 use Galahad\Prismoquent\Support\LinkResolver;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -18,7 +19,11 @@ class PrismicServiceProvider extends ServiceProvider
 	{
 		$this->app->singleton('prismic', function(Application $app) {
 			$config = $app['config'];
-			return new Prismoquent($config['services.prismic'], $app['prismic.resolver'], $config['app.url']);
+			return new Prismoquent(
+				$config['services.prismic'],
+				$app['prismic.resolver'],
+				$app['prismic.serializer'],
+				$config['app.url']);
 		});
 		
 		$this->app->alias('prismic', Api::class);
@@ -29,6 +34,12 @@ class PrismicServiceProvider extends ServiceProvider
 		
 		$this->app->alias('prismic.resolver', LinkResolver::class);
 		$this->app->alias('prismic.resolver', \Prismic\LinkResolver::class);
+		
+		$this->app->singleton('prismic.serializer', function(Application $app) {
+			return new HtmlSerializer($app['prismic.resolver']);
+		});
+		
+		$this->app->alias('prismic.serializer', HtmlSerializer::class);
 	}
 	
 	public function boot()
