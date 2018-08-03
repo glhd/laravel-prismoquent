@@ -62,13 +62,6 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	protected $with = [];
 	
 	/**
-	 * Fields that should be automatically serialized to HTML
-	 *
-	 * @var array
-	 */
-	protected $html = [];
-	
-	/**
 	 * Create a new Prismoquent model instance.
 	 *
 	 * @param \stdClass $document
