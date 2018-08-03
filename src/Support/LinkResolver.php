@@ -2,7 +2,6 @@
 
 namespace Galahad\Prismoquent\Support;
 
-use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Routing\UrlGenerator;
 
 class LinkResolver extends \Prismic\LinkResolver
@@ -35,6 +34,11 @@ class LinkResolver extends \Prismic\LinkResolver
 	{
 		if ($resolver = $this->resolvers[$link->type] ?? null) {
 			return $resolver($link);
+		}
+		
+		// Allow wildcard resolvers
+		if (isset($this->resolvers['*'])) {
+			return $this->resolvers['*']($link);
 		}
 		
 		return $this->app_url;

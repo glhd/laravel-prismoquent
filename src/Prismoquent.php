@@ -14,11 +14,6 @@ use Prismic\Dom\RichText;
 class Prismoquent
 {
 	/**
-	 * @var \Prismic\Api
-	 */
-	protected $api;
-	
-	/**
 	 * @var \Prismic\LinkResolver|LinkResolver
 	 */
 	public $resolver;
@@ -27,6 +22,11 @@ class Prismoquent
 	 * @var string
 	 */
 	public $default_url;
+	
+	/**
+	 * @var \Prismic\Api
+	 */
+	protected $api;
 	
 	/**
 	 * @var array
@@ -44,6 +44,7 @@ class Prismoquent
 	 * @param array $config
 	 * @param \Galahad\Prismoquent\Support\LinkResolver $resolver
 	 * @param \Galahad\Prismoquent\Support\HtmlSerializer $serializer
+	 * @param \Illuminate\Contracts\Events\Dispatcher $events
 	 * @param string $default_url
 	 */
 	public function __construct(array $config, LinkResolver $resolver, HtmlSerializer $serializer, string $default_url)
@@ -83,7 +84,7 @@ class Prismoquent
 	
 	public function previewSession($token) : string
 	{
-		return $this->api->previewSession($token, $this->resolver, $this->default_url);
+		return $this->api()->previewSession($token, $this->resolver, $this->default_url);
 	}
 	
 	public function html($field) : HtmlString

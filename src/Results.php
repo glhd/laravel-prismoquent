@@ -4,8 +4,6 @@ namespace Galahad\Prismoquent;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Prismic\Document;
-use stdClass;
 
 /**
  * @method \Galahad\Prismoquent\Model|null first(callable $callback = null, $default = null)
@@ -14,7 +12,7 @@ use stdClass;
 class Results extends LengthAwarePaginator
 {
 	/**
-	 * @var Response
+	 * @var object
 	 */
 	public $response;
 	
@@ -22,7 +20,7 @@ class Results extends LengthAwarePaginator
 	 * Constructor
 	 *
 	 * @param \Galahad\Prismoquent\Model $model
-	 * @param Response $response
+	 * @param object $response
 	 */
 	public function __construct(Model $model, $response)
 	{
