@@ -2,6 +2,7 @@
 
 namespace Galahad\Prismoquent;
 
+use Galahad\Prismoquent\Support\LinkResolver;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use Prismic\Api;
@@ -30,6 +31,13 @@ class PrismicServiceProvider extends ServiceProvider
 		});
 		
 		$this->app->alias('prismic', Api::class);
+		
+		$this->app->singleton('prismic.resolver', function(Application $app) {
+			return new LinkResolver($app['config'], $app['url']);
+		});
+		
+		$this->app->alias('prismic.resolver', LinkResolver::class);
+		$this->app->alias('prismic.resolver', \Prismic\LinkResolver::class);
 	}
 	
 	public function boot()
