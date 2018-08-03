@@ -18,13 +18,11 @@ class PrismicServiceProvider extends ServiceProvider
 		$this->app->singleton('prismic', function(Application $app) {
 			$config = $app['config'];
 			
-			// FIXME: These will throw after compose install
-			
-			if (!$endpoint = $config->get('services.prismic.endpoint')) {
+			if (!$endpoint = $config['services.prismic.endpoint']) {
 				throw new Exception('services.prismic.endpoint is not set');
 			}
 			
-			if (!$token = $config->get('services.prismic.api_token')) {
+			if (!$token = $config['services.prismic.api_token']) {
 				throw new Exception('services.prismic.api_token is not set');
 			}
 			
@@ -36,7 +34,10 @@ class PrismicServiceProvider extends ServiceProvider
 	
 	public function boot()
 	{
-		Model::setApi($this->app['prismic']);
 		Model::setEventDispatcher($this->app['events']);
+		
+		if ($this->app['config']->has('services.prismic.endpoint')) {
+			Model::setApi($this->app['prismic']);
+		}
 	}
 }
