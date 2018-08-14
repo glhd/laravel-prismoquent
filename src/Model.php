@@ -359,7 +359,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function getRouteKey() : ?string
 	{
-		return $this->document->id ?? null;
+		return $this->document->uid ?? null;
 	}
 	
 	/**
@@ -429,6 +429,11 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 			default:
 				return $this->eloquentCastAttribute($key, $value);
 		}
+	}
+	
+	public function getCasts()
+	{
+		return $this->casts;
 	}
 	
 	/**
@@ -716,14 +721,14 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 		return $this->getAttributeFromArray($key);
 	}
 	
-	protected function oneLink($path, $class_name = null)
+	protected function hasOne($path, $class_name = null)
 	{
 		$link = object_get($this->document, "data.{$path}");
 		
 		return $this->resolveLink($link, $class_name);
 	}
 	
-	protected function manyLinks($path, $class_name = null) : Collection
+	protected function hasMany($path, $class_name = null) : Collection
 	{
 		$segments = explode('.', $path);
 		$link_key = array_pop($segments);

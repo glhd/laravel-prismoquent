@@ -21,13 +21,13 @@ class Page extends \Galahad\Prismoquent\Model
 	// Resolve links as though they were relationships
 	public function authorLinkResolver() : ?Person
 	{
-		return $this->oneLink('author');
+		return $this->hasOne('author');
 	}
 	
 	// Also supports repeating groups of links
 	public function similarPagesLinkResolver() : Collection
 	{
-		return $this->manyLinks('similar_pages.page');
+		return $this->hasMany('similar_pages.page');
 	}
 }
 
@@ -58,6 +58,18 @@ composer require glhd/laravel-prismoquent
 ## Usage
 
 See above for a basic example. More details coming soon.
+
+### Link Resolution
+
+You can automatically resolve links using Laravel routes with:
+
+```php
+// In your AppServiceProvider
+Prismic::registerResolver('page', 'page.show');
+
+// In your web.php route file
+Route::get('/pages/{page}', 'PageController@show')->name('page.show');
+```
 
 ## License
 
