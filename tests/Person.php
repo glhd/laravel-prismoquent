@@ -4,9 +4,7 @@ namespace Galahad\Prismoquent\Tests;
 
 use Galahad\Prismoquent\Model;
 
-class Page extends Model
+class Person extends Model
 {
-	protected $casts = [
-		'title' => 'text',
-	];
+
 }

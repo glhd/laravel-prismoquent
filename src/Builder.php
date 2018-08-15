@@ -755,11 +755,11 @@ class Builder
 		];
 		
 		if (!empty($this->orderings)) {
-			$opts['orderings'] = '['.implode(', ', $this->orderings).']';
+			$opts['orderings'] = '['.implode(',', $this->orderings).']';
 		}
 		
 		if (!empty($this->fetchLinks)) {
-			$opts['fetchLinks'] = implode(', ', $this->fetchLinks);
+			$opts['fetchLinks'] = implode(',', $this->fetchLinks);
 		}
 		
 		return $opts;
@@ -803,16 +803,6 @@ class Builder
 	public function newQuery() : self
 	{
 		return new static($this->api, $this->model);
-	}
-	
-	/**
-	 * Get the Prismic API instance
-	 *
-	 * @return \Prismic\Api
-	 */
-	public function getApi() : Api
-	{
-		return $this->api;
 	}
 	
 	/**

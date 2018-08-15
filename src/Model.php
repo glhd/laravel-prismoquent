@@ -18,8 +18,9 @@ use JsonSerializable;
 use Prismic\Api;
 use Prismic\Document;
 use Prismic\Dom\RichText;
+use Prismic\Fragment\FragmentInterface;
+use Prismic\Fragment\Link\DocumentLink;
 use RuntimeException;
-use stdClass;
 
 /**
  * @mixin \Galahad\Prismoquent\Builder
@@ -395,6 +396,11 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 			return null;
 		}
 		
+		$prismic_accessor_method = 'get'.Str::studly($key);
+		if (method_exists($this->document, $prismic_accessor_method)) {
+			return $this->document->$prismic_accessor_method();
+		}
+		
 		// Unlike Eloquent, where relationships are loaded via a column with
 		// a separate name, Prismic links are likely to share the desired name.
 		// We use the 'LinkResolver' suffix, and look for relationships first
@@ -406,12 +412,22 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 		$type = $this->getType();
 		$value = $this->getAttributeValue($key) ?? $this->getAttributeValue("data.{$type}.{$key}");
 		
+		if ($value instanceof DocumentLink) {
+			return $this->resolveLink($value);
+		}
+		
 		return $value;
 	}
 	
 	public function getCasts()
 	{
-		return $this->casts;
+		$type = $this->getType();
+		
+		return collect($this->casts)
+			->mapWithKeys(function($value, $key) use ($type) {
+				return ["data.{$type}.$key" => $value];
+			})
+			->toArray();
 	}
 	
 	/**
@@ -627,16 +643,21 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 			return $value;
 		}
 		
-		switch ($this->getCastType($key)) {
-			case 'html':
-				return static::$api->html($value);
+		if ($value instanceof FragmentInterface) {
+			$cast = $this->getCastType($key);
 			
-			case 'text':
-				return RichText::asText($value);
+			if ('html' === $cast) {
+				return $value->asHtml(static::$api->resolver);
+			}
 			
-			default:
-				return $this->eloquentCastAttribute($key, $value);
+			if ('text' === $cast) {
+				return $value->asText();
+			}
+			
+			// TODO: Dates
 		}
+		
+		return $this->eloquentCastAttribute($key, $value);
 	}
 	
 	/**
@@ -706,44 +727,48 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 * @param  string $key
 	 * @return mixed
 	 */
-	protected function getAttributeFromArray($key)
+	protected function getAttributeFromArray($path)
 	{
-		$attribute = $this->getDataAtPath($key);
+		// Check to see if Fragment exists and use it if it does
 		
-		if ($attribute instanceof stdClass || is_array($attribute)) {
-			return new Data($this, $attribute, $key);
+		if ($fragment = $this->getFragmentAtPath($path)) {
+			return $fragment;
 		}
 		
-		return $attribute;
-	}
-	
-	protected function getDataAtPath($path, $default = null)
-	{
-		$fragments = $this->document->getFragments();
+		// Otherwise, dig into the structure using dot notation
+		
 		$result = $this->document->getData();
-		$current_segments = [];
 		
 		foreach (explode('.', $path) as $segment) {
-			// Look for value in fragments if we're inside the "data" segment
-			if ('data' !== $segment || count($current_segments)) {
-				$current_segments[] = $segment;
-			}
-			$current_path = implode('.', $current_segments);
-			
-			if (isset($fragments[$current_path])) {
-				return $fragments[$current_path];
-			}
-			
 			if (is_object($result) && isset($result->{$segment})) {
 				$result = $result->{$segment};
 			} else if (is_array($result) && isset($result[$segment])) {
 				$result = $result[$segment];
 			} else {
-				return value($default);
+				return null;
 			}
 		}
 		
 		return $result;
+	}
+	
+	/**
+	 * Load a fragment at a path
+	 *
+	 * @param $path
+	 * @return null|\Prismic\Fragment\FragmentInterface
+	 */
+	protected function getFragmentAtPath($path) : ?FragmentInterface
+	{
+		$fragments = $this->document->getFragments();
+		
+		$path = preg_replace('/^data\./i', '', $path);
+		
+		if (isset($fragments[$path])) {
+			return $fragments[$path];
+		}
+		
+		return null;
 	}
 	
 	/**
@@ -778,12 +803,12 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 			});
 	}
 	
-	protected function resolveLink($link, $class_name = null) : ?self
+	protected function resolveLink(DocumentLink $link, $class_name = null) : ?self
 	{
 		/** @var self $model_class */
-		$model_class = $class_name ?? $this->inferLinkClassName($link->type);
+		$model_class = $class_name ?? $this->inferLinkClassName($link->getType());
 		
-		return $model_class::find($link->id);
+		return $model_class::find($link->getId());
 	}
 	
 	protected function inferLinkClassName($type) : string
