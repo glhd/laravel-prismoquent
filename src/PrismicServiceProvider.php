@@ -22,10 +22,12 @@ class PrismicServiceProvider extends ServiceProvider
 			$config = $app['config'];
 			
 			return new Prismoquent(
-				$config['services.prismic'] ?? [],
+				$config->get('services.prismic', [
+					'endpoint' => env('PRISMIC_ENDPOINT'),
+				]),
 				$app['prismic.resolver'],
 				$app['prismic.serializer'],
-				$config['app.url'] ?? '/'
+				$config->get('app.url', '/')
 			);
 		});
 		
@@ -52,11 +54,14 @@ class PrismicServiceProvider extends ServiceProvider
 	
 	public function boot()
 	{
+		/** @var \Illuminate\Contracts\Config\Repository $config */
+		$config = $this->app['config'];
+		
 		Model::setEventDispatcher($this->app['events']);
 		Model::setApi($this->app['prismic']);
 		
 		if ($this->app instanceof \Illuminate\Foundation\Application) {
-			$controller_enabled = false !== $this->app['config']->get('services.prismic.register_controller');
+			$controller_enabled = false !== $config->get('services.prismic.register_controller');
 			
 			if ($controller_enabled && !$this->app->routesAreCached()) {
 				$this->app['router']->post('/glhd/prismoquent/webhook', WebhookController::class);
