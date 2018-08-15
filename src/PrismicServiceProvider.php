@@ -5,7 +5,7 @@ namespace Galahad\Prismoquent;
 use Galahad\Prismoquent\Http\WebhookController;
 use Galahad\Prismoquent\Support\HtmlSerializer;
 use Galahad\Prismoquent\Support\LinkResolver;
-use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
 use Prismic\Api;
 
@@ -18,33 +18,32 @@ class PrismicServiceProvider extends ServiceProvider
 	 */
 	public function register()
 	{
-		$this->app->singleton('prismic', function(Application $app) {
+		$this->app->singleton('prismic', function(Container $app) {
 			$config = $app['config'];
 			
 			return new Prismoquent(
-				$config['services.prismic'],
+				$config['services.prismic'] ?? [],
 				$app['prismic.resolver'],
 				$app['prismic.serializer'],
-				$config['app.url']
+				$config['app.url'] ?? '/'
 			);
 		});
 		
 		$this->app->alias('prismic', Api::class);
 		
-		$this->app->singleton('prismic.resolver', function(Application $app) {
+		$this->app->singleton('prismic.resolver', function(Container $app) {
 			return new LinkResolver($app['config']->get('app.url', '/'), $app['url']);
 		});
 		
 		$this->app->alias('prismic.resolver', LinkResolver::class);
-		$this->app->alias('prismic.resolver', \Prismic\LinkResolver::class);
 		
-		$this->app->singleton('prismic.serializer', function(Application $app) {
+		$this->app->singleton('prismic.serializer', function(Container $app) {
 			return new HtmlSerializer($app['prismic.resolver']);
 		});
 		
 		$this->app->alias('prismic.serializer', HtmlSerializer::class);
 		
-		$this->app->bind('prismic.controller', function(Application $app) {
+		$this->app->bind('prismic.controller', function(Container $app) {
 			return new WebhookController($app['config']['services.prismic.webhook_secret']);
 		});
 		
@@ -56,10 +55,12 @@ class PrismicServiceProvider extends ServiceProvider
 		Model::setEventDispatcher($this->app['events']);
 		Model::setApi($this->app['prismic']);
 		
-		$controller_enabled = false !== $this->app['config']->get('services.prismic.register_controller');
-		
-		if ($controller_enabled && !$this->app->routesAreCached()) {
-			$this->app['router']->post('/glhd/prismoquent/webhook', WebhookController::class);
+		if ($this->app instanceof \Illuminate\Foundation\Application) {
+			$controller_enabled = false !== $this->app['config']->get('services.prismic.register_controller');
+			
+			if ($controller_enabled && !$this->app->routesAreCached()) {
+				$this->app['router']->post('/glhd/prismoquent/webhook', WebhookController::class);
+			}
 		}
 	}
 }

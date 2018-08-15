@@ -24,7 +24,7 @@ class LinkResolver extends \Prismic\LinkResolver
 	 * @param \Illuminate\Contracts\Config\Repository $config
 	 * @param \Illuminate\Contracts\Routing\UrlGenerator $generator
 	 */
-	public function __construct(string $app_url, UrlGenerator $generator)
+	public function __construct(string $app_url, $generator)
 	{
 		$this->generator = $generator;
 		$this->app_url = $app_url;

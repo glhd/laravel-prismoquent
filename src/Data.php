@@ -13,16 +13,46 @@ class Data implements ArrayAccess
 	/**
 	 * @var \Galahad\Prismoquent\Model
 	 */
-	public $model;
+	protected $_prismoquent_model;
+	
+	/**
+	 * The raw value of the data at this page
+	 *
+	 * @var mixed
+	 */
+	protected $_prismoquent_raw;
+	
+	/**
+	 * @var string
+	 */
+	protected $_prismoquent_prefix;
 	
 	/**
 	 * Constructor
 	 *
 	 * @param \Galahad\Prismoquent\Model $model
+	 * @param string $prefix
 	 */
-	public function __construct(Model $model)
+	public function __construct(Model $model, $value, $prefix = 'data')
 	{
-		$this->model = $model;
+		$this->_prismoquent_model = $model;
+		$this->_prismoquent_raw = $value;
+		$this->_prismoquent_prefix = $prefix;
+	}
+	
+	public function model() : Model
+	{
+		return $this->_prismoquent_model;
+	}
+	
+	public function raw()
+	{
+		return $this->_prismoquent_raw;
+	}
+	
+	public function prefix() : string
+	{
+		return $this->_prismoquent_prefix;
 	}
 	
 	/**
@@ -33,7 +63,7 @@ class Data implements ArrayAccess
 	 */
 	public function __get($name)
 	{
-		return $this->model->getAttribute("data.{$name}");
+		return $this->_prismoquent_model->getAttribute("{$this->_prismoquent_prefix}.{$name}");
 	}
 	
 	/**
@@ -44,7 +74,7 @@ class Data implements ArrayAccess
 	 */
 	public function __set($name, $value)
 	{
-		$this->model->offsetSet($name, $value);
+		$this->_prismoquent_model->offsetSet($name, $value);
 	}
 	
 	/**
@@ -55,7 +85,7 @@ class Data implements ArrayAccess
 	 */
 	public function __isset($name)
 	{
-		return $this->model->offsetExists($name);
+		return $this->_prismoquent_model->offsetExists($name);
 	}
 	
 	/**
@@ -66,7 +96,7 @@ class Data implements ArrayAccess
 	 */
 	public function offsetExists($offset)
 	{
-		return $this->model->offsetExists("data.{$offset}");
+		return $this->_prismoquent_model->offsetExists("{$this->_prismoquent_prefix}.{$offset}");
 	}
 	
 	/**
@@ -77,7 +107,7 @@ class Data implements ArrayAccess
 	 */
 	public function offsetGet($offset)
 	{
-		return $this->model->offsetGet("data.{$offset}");
+		return $this->_prismoquent_model->offsetGet("{$this->_prismoquent_prefix}.{$offset}");
 	}
 	
 	/**
@@ -88,7 +118,7 @@ class Data implements ArrayAccess
 	 */
 	public function offsetSet($offset, $value)
 	{
-		$this->model->offsetSet("data.{$offset}", $value);
+		$this->_prismoquent_model->offsetSet("{$this->_prismoquent_prefix}.{$offset}", $value);
 	}
 	
 	/**
@@ -98,6 +128,6 @@ class Data implements ArrayAccess
 	 */
 	public function offsetUnset($offset)
 	{
-		$this->model->offsetUnset("data.{$offset}");
+		$this->_prismoquent_model->offsetUnset("{$this->_prismoquent_prefix}.{$offset}");
 	}
 }

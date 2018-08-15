@@ -104,11 +104,7 @@ class Prismoquent
 				throw new Exception('services.prismic.endpoint is not set');
 			}
 			
-			if (!$token = $this->config['api_token'] ?? null) {
-				throw new Exception('services.prismic.api_token is not set');
-			}
-			
-			return Api::get($endpoint, $token);
+			return Api::get($endpoint, $this->config['api_token'] ?? null);
 		}
 		
 		return $this->api;

@@ -16,8 +16,10 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use JsonSerializable;
 use Prismic\Api;
+use Prismic\Document;
 use Prismic\Dom\RichText;
 use RuntimeException;
+use stdClass;
 
 /**
  * @mixin \Galahad\Prismoquent\Builder
@@ -43,7 +45,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	/**
 	 * The original Prismic document
 	 *
-	 * @var \stdClass
+	 * @var \Prismic\Document
 	 */
 	public $document;
 	
@@ -66,7 +68,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 *
 	 * @param \stdClass $document
 	 */
-	public function __construct($document = null)
+	public function __construct(Document $document = null)
 	{
 		if ($document) {
 			$this->setDocument($document);
@@ -165,7 +167,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 * @param \stdClass $document
 	 * @return \Galahad\Prismoquent\Model
 	 */
-	public function setDocument($document) : self
+	public function setDocument(Document $document) : self
 	{
 		$this->document = $document;
 		
@@ -190,7 +192,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 * @param object $document
 	 * @return static
 	 */
-	public function newInstance($document)
+	public function newInstance(Document $document)
 	{
 		return new static($document);
 	}
@@ -201,7 +203,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 * @param \stdClass|\Prismic\Prismic $document
 	 * @return static
 	 */
-	public function newFromBuilder($document)
+	public function newFromBuilder(Document $document)
 	{
 		$model = $this->newInstance($document);
 		
@@ -289,7 +291,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function fresh() : self
 	{
-		return $this->newQuery()->findByUID($this->getType(), $this->document->uid);
+		return $this->newQuery()->find($this->document->getId());
 	}
 	
 	/**
@@ -314,7 +316,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	public function is(self $model = null) : bool
 	{
 		return null !== $model
-			&& $this->document->id === $model->document->id;
+			&& $this->document->getId() === $model->document->getId();
 	}
 	
 	/**
@@ -336,7 +338,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	public function getType() : string
 	{
 		if (null === $this->type) {
-			return str_replace('\\', '', Str::snake(class_basename($this)));
+			$this->type = str_replace('\\', '', Str::snake(class_basename($this)));
 		}
 		
 		return $this->type;
@@ -349,7 +351,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function getKey() : ?string
 	{
-		return $this->document->id ?? null;
+		return $this->document->getId() ?? null;
 	}
 	
 	/**
@@ -359,7 +361,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function getRouteKey() : ?string
 	{
-		return $this->document->uid ?? null;
+		return $this->document->getUid() ?? null;
 	}
 	
 	/**
@@ -401,34 +403,10 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 			return $related;
 		}
 		
-		$value = $this->getAttributeValue($key) ?? $this->getAttributeValue("data.{$key}");
+		$type = $this->getType();
+		$value = $this->getAttributeValue($key) ?? $this->getAttributeValue("data.{$type}.{$key}");
 		
 		return $value;
-	}
-	
-	/**
-	 * Cast an attribute to a native PHP type.
-	 *
-	 * @param  string  $key
-	 * @param  mixed  $value
-	 * @return mixed
-	 */
-	protected function castAttribute($key, $value)
-	{
-		if (null === $value) {
-			return $value;
-		}
-		
-		switch ($this->getCastType($key)) {
-			case 'html':
-				return static::$api->html($value);
-				
-			case 'text':
-				return RichText::asText($value);
-			
-			default:
-				return $this->eloquentCastAttribute($key, $value);
-		}
 	}
 	
 	public function getCasts()
@@ -479,7 +457,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	public function getAttributes()
 	{
-		return (array) $this->document->data;
+		return (array) $this->document->getData();
 	}
 	
 	/**
@@ -637,6 +615,31 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	}
 	
 	/**
+	 * Cast an attribute to a native PHP type.
+	 *
+	 * @param  string $key
+	 * @param  mixed $value
+	 * @return mixed
+	 */
+	protected function castAttribute($key, $value)
+	{
+		if (null === $value) {
+			return $value;
+		}
+		
+		switch ($this->getCastType($key)) {
+			case 'html':
+				return static::$api->html($value);
+			
+			case 'text':
+				return RichText::asText($value);
+			
+			default:
+				return $this->eloquentCastAttribute($key, $value);
+		}
+	}
+	
+	/**
 	 * Resolve a link as a relationship
 	 *
 	 * @param  string $method
@@ -705,9 +708,42 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 */
 	protected function getAttributeFromArray($key)
 	{
-		return 'data' === $key
-			? new Data($this)
-			: object_get($this->document, $key);
+		$attribute = $this->getDataAtPath($key);
+		
+		if ($attribute instanceof stdClass || is_array($attribute)) {
+			return new Data($this, $attribute, $key);
+		}
+		
+		return $attribute;
+	}
+	
+	protected function getDataAtPath($path, $default = null)
+	{
+		$fragments = $this->document->getFragments();
+		$result = $this->document->getData();
+		$current_segments = [];
+		
+		foreach (explode('.', $path) as $segment) {
+			// Look for value in fragments if we're inside the "data" segment
+			if ('data' !== $segment || count($current_segments)) {
+				$current_segments[] = $segment;
+			}
+			$current_path = implode('.', $current_segments);
+			
+			if (isset($fragments[$current_path])) {
+				return $fragments[$current_path];
+			}
+			
+			if (is_object($result) && isset($result->{$segment})) {
+				$result = $result->{$segment};
+			} else if (is_array($result) && isset($result[$segment])) {
+				$result = $result[$segment];
+			} else {
+				return value($default);
+			}
+		}
+		
+		return $result;
 	}
 	
 	/**
@@ -723,7 +759,8 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	
 	protected function hasOne($path, $class_name = null)
 	{
-		$link = object_get($this->document, "data.{$path}");
+		$type = $this->getType();
+		$link = object_get($this->document->getData(), "data.{$type}.{$path}");
 		
 		return $this->resolveLink($link, $class_name);
 	}
@@ -733,8 +770,9 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 		$segments = explode('.', $path);
 		$link_key = array_pop($segments);
 		$group_path = implode('.', $segments);
+		$type = $this->getType();
 		
-		return Collection::make(object_get($this->document, "data.{$group_path}"))
+		return Collection::make(object_get($this->document->getData(), "data.{$type}.{$group_path}"))
 			->map(function($group) use ($link_key, $class_name) {
 				return $this->resolveLink($group->$link_key, $class_name);
 			});
