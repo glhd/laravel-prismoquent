@@ -11,6 +11,9 @@
         <img src="https://poser.pugx.org/glhd/laravel-prismoquent/v/stable" alt="Stable version on Packagist" />
         <img src="https://poser.pugx.org/glhd/laravel-prismoquent/v/unstable" alt="Dev version on Packagist" />
     </a>
+    <a href="https://github.styleci.io/repos/143375310">
+        <img src="https://github.styleci.io/repos/143375310/shield?branch=master" alt="Code Style Status">
+	</a>
 	<a href="license.txt" target="_blank">
         <img src="https://poser.pugx.org/glhd/laravel-prismoquent/license" alt="License" />
     </a>
