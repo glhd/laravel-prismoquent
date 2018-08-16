@@ -6,5 +6,4 @@ use Galahad\Prismoquent\Model;
 
 class Person extends Model
 {
-
 }

@@ -55,7 +55,6 @@ class LinkResolver extends \Prismic\LinkResolver
 				$plural = Str::plural($type);
 				return $this->generator->route("{$plural}.show", $link->getUid());
 			} catch (\InvalidArgumentException $e) {
-				//
 			}
 			
 			// Allow wildcard resolvers

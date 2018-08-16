@@ -2,8 +2,8 @@
 
 namespace Galahad\Prismoquent\Exceptions;
 
-use RuntimeException;
 use Illuminate\Support\Arr;
+use RuntimeException;
 
 class DocumentNotFoundException extends RuntimeException
 {
