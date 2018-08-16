@@ -11,18 +11,27 @@ jobs:
     working_directory: ~/prismoquent
 
     steps:
-    - checkout
+      - checkout
 
-    - restore_cache:
-        keys:
-        - v1-dependencies-{{ checksum "composer.json" }}
-        - v1-dependencies-
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "composer.json" }}
+            - v1-dependencies-
 
-    - run: composer install -n --prefer-dist
+      - run: composer install -n --prefer-dist
 
-    - save_cache:
-        paths:
-        - ./vendor
-        key: v1-dependencies-{{ checksum "composer.json" }}
+      - save_cache:
+          paths:
+            - ./vendor
+          key: v1-dependencies-{{ checksum "composer.json" }}
 
-    - run: ./vendor/bin/phpunit
+      - run: mkdir -p ~/phpunit
+
+      - run: ./vendor/bin/phpunit -c ~/prismoquent/phpunit.xml --log-junit ~/phpunit/junit.xml
+
+      - store_test_results:
+          path: ~/phpunit
+
+      - store_artifacts:
+          path: ~/phpunit
+
