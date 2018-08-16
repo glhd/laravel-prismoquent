@@ -27,7 +27,7 @@ jobs:
 
       - run: mkdir -p ~/phpunit
 
-      - run: ./vendor/bin/phpunit -c ~/prismoquent/phpunit.xml --log-junit ~/phpunit/junit.xml
+      - run: ./vendor/bin/phpunit -c phpunit.xml --log-junit ~/phpunit/junit.xml
 
       - store_test_results:
           path: ~/phpunit
