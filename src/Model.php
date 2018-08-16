@@ -431,13 +431,15 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	
 	public function getCasts()
 	{
-		$type = $this->getType();
+		// $type = $this->getType();
+		//
+		// return collect($this->casts)
+		// 	->mapWithKeys(function($value, $key) use ($type) {
+		// 		return ["data.{$type}.$key" => $value];
+		// 	})
+		// 	->toArray();
 		
-		return collect($this->casts)
-			->mapWithKeys(function($value, $key) use ($type) {
-				return ["data.{$type}.$key" => $value];
-			})
-			->toArray();
+		return $this->casts;
 	}
 	
 	/**
