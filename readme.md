@@ -1,6 +1,6 @@
 # An eloquent way to access Prismic.io content
 
-[![CircleCI Build Status](https://circleci.com/gh/glhd/laravel-prismoquent.svg?style=svg)](https://circleci.com/gh/glhd/laravel-prismoquent)
+[![CircleCI Build Status](https://circleci.com/gh/glhd/laravel-prismoquent.svg?style=svg)](https://circleci.com/gh/glhd/laravel-prismoquent) [![Latest Stable Version](https://poser.pugx.org/glhd/laravel-prismoquent/v/stable)](https://packagist.org/packages/glhd/laravel-prismoquent) [![Latest Unstable Version](https://poser.pugx.org/glhd/laravel-prismoquent/v/unstable)](https://packagist.org/packages/glhd/laravel-prismoquent) [![License](https://poser.pugx.org/glhd/laravel-prismoquent/license)](https://packagist.org/packages/glhd/laravel-prismoquent) 
 
 This package provides a mostly Eloquent-compatible Model that you can use to access
 content from [Prismic.io](https://prismic.io) as though it were a standard Eloquent model. 
