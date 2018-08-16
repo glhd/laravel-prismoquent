@@ -13,7 +13,6 @@ jobs:
     steps:
       - checkout
 
-      - run: sudo pecl install xdebug
       - run: sudo docker-php-ext-enable xdebug
 
       - restore_cache:
