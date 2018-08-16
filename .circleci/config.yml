@@ -13,6 +13,9 @@ jobs:
     steps:
       - checkout
 
+      - run: sudo pecl install xdebug
+      - run: sudo docker-php-ext-enable xdebug
+
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "composer.json" }}
@@ -27,7 +30,9 @@ jobs:
 
       - run: mkdir -p ~/phpunit
 
-      - run: ./vendor/bin/phpunit -c phpunit.xml --log-junit ~/phpunit/junit.xml
+      - run: ./vendor/bin/phpunit -c phpunit.xml --log-junit ~/phpunit/junit.xml --coverage-clover ~/phpunit/clover.xml
+
+      - run: php vendor/bin/php-coveralls -x ~/phpunit/clover.xml
 
       - store_test_results:
           path: ~/phpunit
