@@ -3,10 +3,10 @@
 namespace Galahad\Prismoquent\Facades;
 
 use Illuminate\Support\Facades\Facade;
-use Prismic\LinkResolver;
 
 /**
  * @method static \Prismic\Api getFacadeRoot()
+ * @mixin \Galahad\Prismoquent\Prismoquent
  */
 class Prismic extends Facade
 {
