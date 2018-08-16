@@ -6,16 +6,8 @@ use Prismic\Fragment\CompositeSlice;
 use Prismic\Fragment\GroupDoc;
 use Prismic\Fragment\SliceZone;
 
-class FieldCastingTest extends TestCase
+class SliceTest extends TestCase
 {
-	public function test_structured_text_can_be_accessed_as_html() : void
-	{
-		$page = Page::find('W3RRKh0AADaEY847');
-		$html = $page->body->asHtml();
-		
-		$this->assertTrue(str_contains($html, '<strong>'));
-	}
-	
 	public function test_slices() : void
 	{
 		$page = Page::find('W3RRKh0AADaEY847');

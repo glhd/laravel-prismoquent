@@ -6,39 +6,44 @@ content from [Prismic.io](https://prismic.io) as though it were a standard Eloqu
 ```php
 class Page extends \Galahad\Prismoquent\Model
 {
-	// Automatically inferred as "page"
+	// Automatically inferred from class name ("page") if left unset
 	protected $type;
-	
-	// Eager load links using Prismic's fetchLinks option
-	protected $with = [];
 	
 	// Cast RichText to text or HTML (all other cast types also supported)
 	protected $casts = [
-		'data.meta_description' => 'text',
-		'data.body' => 'html',
+		'title' => 'text',
+		'meta_description' => 'text',
+		'body' => 'html',
 	];
 	
 	// Resolve links as though they were relationships
 	public function authorLinkResolver() : ?Person
 	{
-		return $this->hasOne('author');
+		return $this->hasOne('author', Person::class);
 	}
 	
 	// Also supports repeating groups of links
-	public function similarPagesLinkResolver() : Collection
+	public function similarPagesLinkResolver()
 	{
-		return $this->hasMany('similar_pages.page');
+		return $this->hasMany('similar_pages.page', static::class);
 	}
 }
 
 // Familiar API
 $page = Page::where('document.id', 'W2N5Dx8AAD1TPaYt')->first();
+$page = Page::find('W2N5Dx8AAD1TPaYt');
+$page = Page::findOrFail('W2N5Dx8AAD1TPaYt');
+
+echo "<h1>{$page->title}</h1>";
+echo $page->body;
+
+echo "<p>Written by {$page->author->name}</p>"
+echo "<h2>Similar Pages</h2>";
 
 foreach ($page->similar_pages as $similar_page) {
-	// $similar_page instanceof Page
+	echo "<h3>{$similar_page->title}</h3>";
+	echo "<p>{$similar_page->meta_description}</p>";
 }
-
-$author_name = $page->author->name;
 
 // With full support for all Prismic predicates
 Page::where('my.page.body', 'fulltext', 'laravel')->get();
@@ -61,16 +66,30 @@ See above for a basic example. More details coming soon.
 
 ### Link Resolution
 
-You can automatically resolve links using Laravel routes with:
+You can register link resolvers as either a callable or a route name:
 
 ```php
 // In your AppServiceProvider
-Prismic::registerResolver('page', 'page.show');
+Prismic::registerResolver('page', 'pages.show');
+Prismic::registerResolver('person', function(DocumentLink $link) {
+	return url('/people/'.$link->getUid());
+});
 
 // In your web.php route file
-Route::get('/pages/{page}', 'PageController@show')->name('page.show');
+Route::get('/pages/{page}', 'PageController@show')->name('pages.show');
+```
+
+If you do not set up a resolver, Prismoquent will try a resource route
+for your document. So `Page` will try `route('pages.show', $uid)` or
+`NewsItem` will try `route('news_items.show', $uid)`.
+
+Once your resolvers are defined, you can resolve links in any Prismic
+Fragment using:
+
+```php
+$html = Prismic::asHtml($fragment);
 ```
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+The MIT License (MIT). Please see [License File](license.txt) for more information.

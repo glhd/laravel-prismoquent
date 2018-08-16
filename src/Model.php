@@ -17,8 +17,9 @@ use Illuminate\Support\Str;
 use JsonSerializable;
 use Prismic\Api;
 use Prismic\Document;
-use Prismic\Dom\RichText;
 use Prismic\Fragment\FragmentInterface;
+use Prismic\Fragment\Group;
+use Prismic\Fragment\GroupDoc;
 use Prismic\Fragment\Link\DocumentLink;
 use RuntimeException;
 
@@ -30,6 +31,21 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	use HasRelationships, HasEvents, HidesAttributes, HasAttributes {
 		castAttribute as eloquentCastAttribute;
 	}
+	
+	protected const DOCUMENT_ATTRIBUTES = [
+		'slug' => 'getSlug',
+		'id' => 'getId',
+		'uid' => 'getUid',
+		'type' => 'getType',
+		'href' => 'getHref',
+		'tags' => 'getTags',
+		'slugs' => 'getSlugs',
+		'lang' => 'getLang',
+		'alternate_languages' => 'getAlternateLanguages',
+		'data' => 'getData',
+		'first_publication_date' => 'getFirstPublicationDate',
+		'last_publication_date' => 'getLastPublicationDate',
+	];
 	
 	/**
 	 * The event dispatcher instance.
@@ -110,9 +126,9 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 * Find model by ID
 	 *
 	 * @param $id
-	 * @return \Galahad\Prismoquent\Model|null
+	 * @return \Galahad\Prismoquent\Model|\Galahad\Prismoquent\Results|null
 	 */
-	public static function find($id) : ?self
+	public static function find($id)
 	{
 		return static::query()->find($id);
 	}
@@ -396,21 +412,15 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 			return null;
 		}
 		
-		$prismic_accessor_method = 'get'.Str::studly($key);
-		if (method_exists($this->document, $prismic_accessor_method)) {
-			return $this->document->$prismic_accessor_method();
-		}
-		
 		// Unlike Eloquent, where relationships are loaded via a column with
 		// a separate name, Prismic links are likely to share the desired name.
 		// We use the 'LinkResolver' suffix, and look for relationships first
 		// to address this (otherwise getAttribute would almost always hit first.
-		if ($related = $this->getRelationValue("{$key}LinkResolver")) {
+		if ($related = $this->getRelationValue(Str::camel($key).'LinkResolver')) {
 			return $related;
 		}
 		
-		$type = $this->getType();
-		$value = $this->getAttributeValue($key) ?? $this->getAttributeValue("data.{$type}.{$key}");
+		$value = $this->getAttributeValue($key);
 		
 		if ($value instanceof DocumentLink) {
 			return $this->resolveLink($value);
@@ -630,6 +640,16 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 		return $this->toJson();
 	}
 	
+	protected function getDocumentAttribute($key)
+	{
+		if (isset(static::DOCUMENT_ATTRIBUTES[$key])) {
+			$method = static::DOCUMENT_ATTRIBUTES[$key];
+			return $this->document->$method();
+		}
+		
+		return null;
+	}
+	
 	/**
 	 * Cast an attribute to a native PHP type.
 	 *
@@ -727,48 +747,28 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 * @param  string $key
 	 * @return mixed
 	 */
-	protected function getAttributeFromArray($path)
+	protected function getAttributeFromArray($key)
 	{
-		// Check to see if Fragment exists and use it if it does
-		
-		if ($fragment = $this->getFragmentAtPath($path)) {
-			return $fragment;
+		if ($value = $this->getDocumentAttribute($key)) {
+			return $value;
 		}
 		
-		// Otherwise, dig into the structure using dot notation
-		
-		$result = $this->document->getData();
-		
-		foreach (explode('.', $path) as $segment) {
-			if (is_object($result) && isset($result->{$segment})) {
-				$result = $result->{$segment};
-			} else if (is_array($result) && isset($result[$segment])) {
-				$result = $result[$segment];
-			} else {
-				return null;
-			}
+		// Unlike Eloquent, where relationships are loaded via a column with
+		// a separate name, Prismic links are likely to share the desired name.
+		// We use the 'LinkResolver' suffix, and look for relationships first
+		// to address this (otherwise getAttribute would almost always hit first.
+		if ($related = $this->getRelationValue("{$key}LinkResolver")) {
+			return $related;
 		}
 		
-		return $result;
-	}
-	
-	/**
-	 * Load a fragment at a path
-	 *
-	 * @param $path
-	 * @return null|\Prismic\Fragment\FragmentInterface
-	 */
-	protected function getFragmentAtPath($path) : ?FragmentInterface
-	{
-		$fragments = $this->document->getFragments();
+		$type = $this->getType();
+		$value = $this->document->get("{$type}.{$key}");
 		
-		$path = preg_replace('/^data\./i', '', $path);
-		
-		if (isset($fragments[$path])) {
-			return $fragments[$path];
+		if ($value instanceof DocumentLink) {
+			return $this->resolveLink($value);
 		}
 		
-		return null;
+		return $value;
 	}
 	
 	/**
@@ -785,9 +785,11 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	protected function hasOne($path, $class_name = null)
 	{
 		$type = $this->getType();
-		$link = object_get($this->document->getData(), "data.{$type}.{$path}");
+		$link = $this->document->get("{$type}.{$path}");
 		
-		return $this->resolveLink($link, $class_name);
+		return $link instanceof DocumentLink
+			? $this->resolveLink($link, $class_name)
+			: null;
 	}
 	
 	protected function hasMany($path, $class_name = null) : Collection
@@ -797,10 +799,20 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 		$group_path = implode('.', $segments);
 		$type = $this->getType();
 		
-		return Collection::make(object_get($this->document->getData(), "data.{$type}.{$group_path}"))
-			->map(function($group) use ($link_key, $class_name) {
-				return $this->resolveLink($group->$link_key, $class_name);
-			});
+		$group = $this->document->get("{$type}.{$group_path}");
+		
+		if ($group instanceof Group) {
+			return Collection::make($group->getArray())
+				->map(function(GroupDoc $doc) use ($link_key, $class_name) {
+					$link = $doc->get($link_key);
+					return $link instanceof DocumentLink
+						? $this->resolveLink($link, $class_name)
+						: null;
+				})
+				->filter();
+		}
+		
+		return new Collection();
 	}
 	
 	protected function resolveLink(DocumentLink $link, $class_name = null) : ?self

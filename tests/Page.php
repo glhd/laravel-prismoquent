@@ -9,4 +9,9 @@ class Page extends Model
 	protected $casts = [
 		'title' => 'text',
 	];
+	
+	public function resolvedAuthorLinkResolver()
+	{
+		return $this->hasOne('author', Person::class);
+	}
 }

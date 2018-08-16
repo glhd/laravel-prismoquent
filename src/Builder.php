@@ -4,6 +4,7 @@ namespace Galahad\Prismoquent;
 
 use BadMethodCallException;
 use DateTime;
+use Galahad\Prismoquent\Exceptions\DocumentNotFoundException;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Debug\Dumper;
 use Illuminate\Support\HigherOrderTapProxy;
@@ -215,6 +216,8 @@ class Builder
 		if ($use_default) {
 			return [$predicate, 'at'];
 		}
+		
+		$predicate = $this->applyPredicateAlias($predicate);
 		
 		if ($this->invalidPredicateAndValue($predicate, $value)) {
 			throw new InvalidArgumentException('Illegal operator and value combination.');
@@ -674,12 +677,52 @@ class Builder
 	/**
 	 * Find by ID
 	 *
-	 * @param string $id
-	 * @return null|\Prismic\Document
+	 * @param string|array|Arrayable $id
+	 * @return null|\Galahad\Prismoquent\Model|\Galahad\Prismoquent\Results
 	 */
-	public function find($id) : ?Model
+	public function find($id)
 	{
+		if (is_array($id) || $id instanceof Arrayable) {
+			return $this->findMany($id);
+		}
+		
 		return $this->where('document.id', 'at', $id)->first();
+	}
+	
+	/**
+	 * Find many documents at once
+	 *
+	 * @param $ids
+	 * @return \Galahad\Prismoquent\Results
+	 */
+	public function findMany($ids)
+	{
+		return $this->whereIn('document.id', $ids)->get();
+	}
+	
+	/**
+	 * Find a document by its ID or throw an exception
+	 *
+	 * @param  mixed  $id
+	 * @return \Galahad\Prismoquent\Model|\Galahad\Prismoquent\Results
+	 *
+	 * @throws \Galahad\Prismoquent\Exceptions\DocumentNotFoundException
+	 */
+	public function findOrFail($id)
+	{
+		$result = $this->find($id);
+		
+		if (is_array($id)) {
+			if (count($result) === count(array_unique($id))) {
+				return $result;
+			}
+		} elseif (null !== $result) {
+			return $result;
+		}
+		
+		throw (new DocumentNotFoundException())->setDocument(
+			get_class($this->model), $id
+		);
 	}
 	
 	/**
@@ -897,6 +940,22 @@ class Builder
 	}
 	
 	/**
+	 * Execute the query and get the first result or throw an exception.
+	 *
+	 * @return \Galahad\Prismoquent\Model
+	 *
+	 * @throws \Galahad\Prismoquent\Exceptions\DocumentNotFoundException
+	 */
+	public function firstOrFail()
+	{
+		if ($model = $this->first()) {
+			return $model;
+		}
+		
+		throw (new DocumentNotFoundException())->setDocument(get_class($this->model));
+	}
+	
+	/**
 	 * Apply the callback's query changes if the given "value" is true.
 	 *
 	 * @param  mixed $value
@@ -995,5 +1054,16 @@ class Builder
 	{
 		return !in_array(strtolower($predicate), $this->predicates, true)
 			&& !isset($this->predicate_aliases[$predicate]);
+	}
+	
+	/**
+	 * Swap "=" for "at" etc.
+	 *
+	 * @param $predicate
+	 * @return string
+	 */
+	protected function applyPredicateAlias($predicate) : string
+	{
+		return $this->predicate_aliases[$predicate] ?? $predicate;
 	}
 }

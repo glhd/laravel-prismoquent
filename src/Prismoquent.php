@@ -5,6 +5,7 @@ namespace Galahad\Prismoquent;
 use Galahad\Prismoquent\Support\HtmlSerializer;
 use Galahad\Prismoquent\Support\LinkResolver;
 use Prismic\Api;
+use Prismic\Fragment\FragmentInterface;
 
 /**
  * @mixin \Prismic\Api
@@ -68,6 +69,16 @@ class Prismoquent
 	public function previewSession($token) : string
 	{
 		return $this->api()->previewSession($token, $this->resolver, $this->default_url);
+	}
+	
+	public function asHtml(FragmentInterface $fragment)
+	{
+		return $fragment->asHtml($this->resolver);
+	}
+	
+	public function asText(FragmentInterface $fragment)
+	{
+		return $fragment->asText();
 	}
 	
 	/**
