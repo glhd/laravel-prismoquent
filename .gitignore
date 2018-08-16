@@ -2,5 +2,4 @@
 /.env
 composer.lock
 .DS_Store
-/phpunit.xml
 /.idea
