@@ -1,5 +1,7 @@
 # An eloquent way to access Prismic.io content
 
+[![CircleCI Build Status](https://circleci.com/gh/glhd/laravel-prismoquent.svg?style=svg)](https://circleci.com/gh/glhd/laravel-prismoquent)
+
 This package provides a mostly Eloquent-compatible Model that you can use to access
 content from [Prismic.io](https://prismic.io) as though it were a standard Eloquent model. 
 
