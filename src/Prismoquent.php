@@ -117,7 +117,7 @@ class Prismoquent
 		];
 		
 		if ($slice->isComposite()) {
-			foreach ($slice->getPrimary() as $key => $fragment) {
+			foreach ($slice->getPrimary()->getFragments() as $key => $fragment) {
 				$data['fragments']->$key = $fragment;
 				
 				if (!isset($data[$key])) {

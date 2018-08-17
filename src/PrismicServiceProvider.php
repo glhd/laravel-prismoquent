@@ -38,30 +38,31 @@ class PrismicServiceProvider extends ServiceProvider
 		
 		$this->app->alias('prismic.resolver', LinkResolver::class);
 		
-		// $this->app->bind('prismic.controller', function(Container $app) {
-		// 	return new WebhookController($app['config']['services.prismic.webhook_secret']);
-		// });
-		//
-		// $this->app->alias('prismic.controller', WebhookController::class);
+		$this->app->bind('prismic.controller', function(Container $app) {
+			return new WebhookController($app['config']->get('services.prismic.webhook_secret', ''));
+		});
+		
+		$this->app->alias('prismic.controller', WebhookController::class);
 	}
 	
 	public function boot()
 	{
-		// /** @var \Illuminate\Contracts\Config\Repository $config */
-		// $config = $this->app['config'];
-		
 		Model::setEventDispatcher($this->app['events']);
 		Model::setApi($this->app['prismic']);
 		
+		$this->registerRoutes();
 		$this->registerBladeDirectives();
+	}
+	
+	protected function registerRoutes()
+	{
+		if ($this->app instanceof \Illuminate\Foundation\Application) {
+			$controller_enabled = false !== $this->app['config']->get('services.prismic.register_controller');
 		
-		// if ($this->app instanceof \Illuminate\Foundation\Application) {
-		// 	$controller_enabled = false !== $config->get('services.prismic.register_controller');
-		//
-		// 	if ($controller_enabled && !$this->app->routesAreCached()) {
-		// 		$this->app['router']->post('/glhd/prismoquent/webhook', WebhookController::class);
-		// 	}
-		// }
+			if ($controller_enabled && !$this->app->routesAreCached()) {
+				$this->app['router']->post('/glhd/prismoquent/webhook', $this->app->make('prismic.controller'));
+			}
+		}
 	}
 	
 	protected function registerBladeDirectives()
@@ -78,7 +79,15 @@ class PrismicServiceProvider extends ServiceProvider
 		});
 		
 		$compiler->directive('asHtml', function($fragment) {
-			return "<?php \\Galahad\\Prismoquent\\Facades\\Prismic::asHtml({$fragment}); ?>";
+			return "<?php echo \\Galahad\\Prismoquent\\Facades\\Prismic::asHtml({$fragment}); ?>";
+		});
+		
+		$compiler->directive('asText', function($fragment) {
+			return "<?php echo \\Galahad\\Prismoquent\\Facades\\Prismic::asText({$fragment}); ?>";
+		});
+		
+		$compiler->directive('resolveLink', function($fragment) {
+			return "<?php echo \\Galahad\\Prismoquent\\Facades\\Prismic::resolveLink({$fragment}); ?>";
 		});
 	}
 }

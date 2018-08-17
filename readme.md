@@ -83,6 +83,21 @@ composer require glhd/laravel-prismoquent
 
 See above for a basic example. More details coming soon.
 
+### Configuration
+
+Looks for config in your `services.php` file:
+
+```php
+return [
+	'prismic' => [
+		'endpoint' => env('PRISMIC_ENDPOINT'), // Required
+		'api_token' => env('PRISMIC_API_TOKEN'), // Optional, depending on your Prismic permissions
+		'webhook_secret' => env('PRISMIC_WEBHOOK_SECRET'), // Optional, if you're using build-in controller
+		'register_controller' => false, // Set to false to disable Webhook controller
+    ]
+];
+```
+
 ### Link Resolution
 
 You can register link resolvers as either a callable or a route name:
@@ -107,6 +122,29 @@ Fragment using:
 
 ```php
 $html = Prismic::asHtml($fragment);
+```
+
+### Blade Directives
+
+```blade
+
+<div>
+	{{-- Will render slice object using views/slices/slice-type.blade.php --}}
+	@slice($object_implementing_slice_tnterface)
+</div>
+
+{{-- Will render all slices in slice zone using @slice directive --}}
+@slice($slice_zone_object)
+
+{{-- Converts frament to HTML using link resolver --}}
+@asHtml($fragment)
+
+{{-- Converts frament to plain text --}}
+@asText($fragment)
+
+{{-- Converts a DocumentLink fragment to the resolved URL --}}
+@resolveLink($documentLink)
+
 ```
 
 ## License
