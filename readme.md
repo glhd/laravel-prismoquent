@@ -20,7 +20,9 @@
 </p>
 
 This package provides a mostly Eloquent-compatible Model that you can use to access
-content from [Prismic.io](https://prismic.io) as though it were a standard Eloquent model. 
+content from [Prismic.io](https://prismic.io) as though it were a standard Eloquent model.
+
+#### App/Page.php 
 
 ```php
 class Page extends \Galahad\Prismoquent\Model
@@ -31,7 +33,6 @@ class Page extends \Galahad\Prismoquent\Model
 	// Cast RichText to text or HTML (all other cast types also supported)
 	protected $casts = [
 		'title' => 'text',
-		'meta_description' => 'text',
 		'body' => 'html',
 	];
 	
@@ -47,7 +48,33 @@ class Page extends \Galahad\Prismoquent\Model
 		return $this->hasMany('similar_pages.page', static::class);
 	}
 }
+```
 
+#### App/Http/Controllers/PageController.php
+
+```php
+class PageController extend Controller
+{
+	public function show(Page $page)
+	{
+		return view('page.show', compact('page'));
+	}
+}
+```
+
+#### resources/views/page/show.blade.php
+
+```blade
+
+<h1>{{ $page->title }}</h1>
+
+<div class="page-body">
+	{{ $page->body }}
+</div>
+
+```
+
+```php
 // Familiar API
 $page = Page::where('document.id', 'W2N5Dx8AAD1TPaYt')->first();
 $page = Page::find('W2N5Dx8AAD1TPaYt');
@@ -128,10 +155,8 @@ $html = Prismic::asHtml($fragment);
 
 ```blade
 
-<div>
-	{{-- Will render slice object using views/slices/slice-type.blade.php --}}
-	@slice($object_implementing_slice_tnterface)
-</div>
+{{-- Will render slice object using views/slices/slice-type.blade.php --}}
+@slice($object_implementing_slice_tnterface)
 
 {{-- Will render all slices in slice zone using @slice directive --}}
 @slice($slice_zone_object)

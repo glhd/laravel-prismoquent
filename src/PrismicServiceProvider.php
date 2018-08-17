@@ -60,7 +60,7 @@ class PrismicServiceProvider extends ServiceProvider
 			$controller_enabled = false !== $this->app['config']->get('services.prismic.register_controller');
 		
 			if ($controller_enabled && !$this->app->routesAreCached()) {
-				$this->app['router']->post('/glhd/prismoquent/webhook', $this->app->make('prismic.controller'));
+				$this->app['router']->post('/glhd/prismoquent/webhook', WebhookController::class);
 			}
 		}
 	}
