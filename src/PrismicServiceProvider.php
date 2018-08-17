@@ -76,5 +76,9 @@ class PrismicServiceProvider extends ServiceProvider
 		$compiler->directive('slices', function($slices) {
 			return "<?php foreach({$slices}->getSlices() as \$__prismoquent_slice): \\Galahad\\Prismoquent\\Facades\\Prismic::sliceComponent(\$__env, \$__prismoquent_slice); endforeach; ?>";
 		});
+		
+		$compiler->directive('asHtml', function($fragment) {
+			return "<?php \\Galahad\\Prismoquent\\Facades\\Prismic::asHtml({$fragment}); ?>";
+		});
 	}
 }

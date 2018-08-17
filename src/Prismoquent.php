@@ -113,10 +113,17 @@ class Prismoquent
 			'primary' => $slice instanceof CompositeSlice
 				? $slice->getPrimary()
 				: $slice,
+			'fragments' => new \stdClass(),
 		];
 		
 		if ($slice->isComposite()) {
-			$data = array_merge((array) $slice->getPrimary(), $data);
+			foreach ($slice->getPrimary() as $key => $fragment) {
+				$data['fragments']->$key = $fragment;
+				
+				if (!isset($data[$key])) {
+					$data[$key] = $fragment;
+				}
+			}
 		}
 			
 		$factory->startComponent($componentPath, $data);
