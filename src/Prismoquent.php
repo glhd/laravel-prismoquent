@@ -7,6 +7,7 @@ use Galahad\Prismoquent\Support\LinkResolver;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Factory;
 use Prismic\Api;
+use Prismic\Fragment\CompositeSlice;
 use Prismic\Fragment\FragmentInterface;
 use Prismic\Fragment\Link\DocumentLink;
 use Prismic\Fragment\SliceInterface;
@@ -106,8 +107,19 @@ class Prismoquent
 		$componentPath = empty($this->componentPath)
 			? $type
 			: "{$this->componentPath}.{$type}";
+		
+		$data = [
+			'slice' => $slice,
+			'primary' => $slice instanceof CompositeSlice
+				? $slice->getPrimary()
+				: $slice,
+		];
+		
+		if ($slice->isComposite()) {
+			$data = array_merge((array) $slice->getPrimary(), $data);
+		}
 			
-		$factory->startComponent($componentPath, compact('slice'));
+		$factory->startComponent($componentPath, $data);
 		echo $this->asHtml($slice);
 		echo $factory->renderComponent();
 	}
