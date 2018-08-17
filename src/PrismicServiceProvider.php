@@ -7,7 +7,9 @@ use Galahad\Prismoquent\Support\HtmlSerializer;
 use Galahad\Prismoquent\Support\LinkResolver;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\Compilers\BladeCompiler;
 use Prismic\Api;
+use Prismic\Fragment\SliceInterface;
 
 class PrismicServiceProvider extends ServiceProvider
 {
@@ -51,6 +53,8 @@ class PrismicServiceProvider extends ServiceProvider
 		Model::setEventDispatcher($this->app['events']);
 		Model::setApi($this->app['prismic']);
 		
+		$this->registerBladeDirectives();
+		
 		// if ($this->app instanceof \Illuminate\Foundation\Application) {
 		// 	$controller_enabled = false !== $config->get('services.prismic.register_controller');
 		//
@@ -58,5 +62,19 @@ class PrismicServiceProvider extends ServiceProvider
 		// 		$this->app['router']->post('/glhd/prismoquent/webhook', WebhookController::class);
 		// 	}
 		// }
+	}
+	
+	protected function registerBladeDirectives()
+	{
+		/** @var BladeCompiler $compiler */
+		$compiler = $this->app['view']->getEngineResolver()->resolve('blade')->getCompiler();
+		
+		$compiler->directive('slice', function($slice) {
+			return "<?php \$__env->startComponent({$slice}->getSliceType(), ['slice' => {$slice}]); echo \$__env->renderComponent(); ?>";
+		});
+		
+		$compiler->directive('slices', function($slices) {
+			return "<?php foreach({$slices}->getSlices() as \$__prismoquent_slice): \$__env->startComponent(\$__prismoquent_slice->getSliceType(), ['slice' => \$__prismoquent_slice]); echo \$__env->renderComponent(); endforeach; ?>";
+		});
 	}
 }

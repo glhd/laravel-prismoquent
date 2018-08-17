@@ -4,8 +4,10 @@ namespace Galahad\Prismoquent;
 
 use Galahad\Prismoquent\Support\HtmlSerializer;
 use Galahad\Prismoquent\Support\LinkResolver;
+use Illuminate\Support\HtmlString;
 use Prismic\Api;
 use Prismic\Fragment\FragmentInterface;
+use Prismic\Fragment\Link\DocumentLink;
 
 /**
  * @mixin \Prismic\Api
@@ -73,12 +75,17 @@ class Prismoquent
 	
 	public function asHtml(FragmentInterface $fragment)
 	{
-		return $fragment->asHtml($this->resolver);
+		return new HtmlString($fragment->asHtml($this->resolver));
 	}
 	
 	public function asText(FragmentInterface $fragment)
 	{
 		return $fragment->asText();
+	}
+	
+	public function resolveLink(DocumentLink $link)
+	{
+		return $this->resolver->resolveLink($link);
 	}
 	
 	/**
