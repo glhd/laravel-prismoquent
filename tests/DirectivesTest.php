@@ -3,6 +3,7 @@
 namespace Galahad\Prismoquent\Tests;
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\View;
 
 class DirectivesTest extends TestCase
 {

@@ -109,7 +109,7 @@ class Prismoquent
 			
 		$factory->startComponent($componentPath, compact('slice'));
 		echo $this->asHtml($slice);
-		$factory->renderComponent();
+		echo $factory->renderComponent();
 	}
 	
 	/**
