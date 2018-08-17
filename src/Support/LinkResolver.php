@@ -5,6 +5,8 @@ namespace Galahad\Prismoquent\Support;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Support\Str;
 use Prismic\Fragment\Link\DocumentLink;
+use Prismic\Fragment\Link\LinkInterface;
+use Prismic\Fragment\Link\WebLink;
 
 class LinkResolver extends \Prismic\LinkResolver
 {
@@ -61,6 +63,10 @@ class LinkResolver extends \Prismic\LinkResolver
 			if (isset($this->resolvers['*'])) {
 				return $this->resolvers['*']($link);
 			}
+		}
+		
+		if ($link instanceof LinkInterface) {
+			return $link->getUrl();
 		}
 		
 		return $this->app_url;
