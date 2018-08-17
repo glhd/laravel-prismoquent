@@ -18,7 +18,7 @@ class WebhookController extends Controller
 	 */
 	protected $prismic_secret;
 	
-	public function __construct(string $prismic_secret)
+	public function __construct(string $prismic_secret = null)
 	{
 		$this->prismic_secret = $prismic_secret;
 	}
@@ -27,7 +27,7 @@ class WebhookController extends Controller
 	{
 		$payload = $request->json();
 		
-		if ($payload->secret !== $this->prismic_secret) {
+		if ($this->prismic_secret && $payload->get('secret') !== $this->prismic_secret) {
 			throw new NotFoundHttpException();
 		}
 		

@@ -39,7 +39,7 @@ class PrismicServiceProvider extends ServiceProvider
 		$this->app->alias('prismic.resolver', LinkResolver::class);
 		
 		$this->app->bind('prismic.controller', function(Container $app) {
-			return new WebhookController($app['config']->get('services.prismic.webhook_secret', ''));
+			return new WebhookController($app['config']->get('services.prismic.webhook_secret'));
 		});
 		
 		$this->app->alias('prismic.controller', WebhookController::class);
