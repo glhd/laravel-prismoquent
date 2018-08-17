@@ -70,11 +70,11 @@ class PrismicServiceProvider extends ServiceProvider
 		$compiler = $this->app['view']->getEngineResolver()->resolve('blade')->getCompiler();
 		
 		$compiler->directive('slice', function($slice) {
-			return "<?php \$__env->startComponent({$slice}->getSliceType(), ['slice' => {$slice}]); echo \$__env->renderComponent(); ?>";
+			return "<?php \\Galahad\\Prismoquent\\Facades\\Prismic::sliceComponent(\$__env, {$slice}); ?>";
 		});
 		
 		$compiler->directive('slices', function($slices) {
-			return "<?php foreach({$slices}->getSlices() as \$__prismoquent_slice): \$__env->startComponent(\$__prismoquent_slice->getSliceType(), ['slice' => \$__prismoquent_slice]); echo \$__env->renderComponent(); endforeach; ?>";
+			return "<?php foreach({$slices}->getSlices() as \$__prismoquent_slice): \\Galahad\\Prismoquent\\Facades\\Prismic::sliceComponent(\$__env, \$__prismoquent_slice); endforeach; ?>";
 		});
 	}
 }

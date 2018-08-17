@@ -5,9 +5,11 @@ namespace Galahad\Prismoquent;
 use Galahad\Prismoquent\Support\HtmlSerializer;
 use Galahad\Prismoquent\Support\LinkResolver;
 use Illuminate\Support\HtmlString;
+use Illuminate\View\Factory;
 use Prismic\Api;
 use Prismic\Fragment\FragmentInterface;
 use Prismic\Fragment\Link\DocumentLink;
+use Prismic\Fragment\SliceInterface;
 
 /**
  * @mixin \Prismic\Api
@@ -35,6 +37,11 @@ class Prismoquent
 	protected $config;
 	
 	/**
+	 * @var string
+	 */
+	protected $componentPath = 'slices';
+	
+	/**
 	 * Constructor
 	 *
 	 * @param array $config
@@ -47,6 +54,11 @@ class Prismoquent
 		
 		$this->setResolver($resolver);
 		$this->setDefaultUrl($default_url);
+	}
+	
+	public function setComponentPath(string $path) : self
+	{
+		$this->componentPath = str_replace(DIRECTORY_SEPARATOR, '.', $path);
 	}
 	
 	public function setResolver(\Prismic\LinkResolver $resolver) : self
@@ -86,6 +98,18 @@ class Prismoquent
 	public function resolveLink(DocumentLink $link)
 	{
 		return $this->resolver->resolveLink($link);
+	}
+	
+	public function sliceComponent(Factory $factory, SliceInterface $slice)
+	{
+		$type = $slice->getSliceType();
+		$componentPath = empty($this->componentPath)
+			? $type
+			: "{$this->componentPath}.{$type}";
+			
+		$factory->startComponent($componentPath, compact('slice'));
+		echo $this->asHtml($slice);
+		$factory->renderComponent();
 	}
 	
 	/**
