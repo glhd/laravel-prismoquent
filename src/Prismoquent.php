@@ -2,6 +2,7 @@
 
 namespace Galahad\Prismoquent;
 
+use Galahad\Prismoquent\Support\Cache;
 use Galahad\Prismoquent\Support\HtmlSerializer;
 use Galahad\Prismoquent\Support\LinkResolver;
 use Illuminate\Support\HtmlString;
@@ -43,23 +44,37 @@ class Prismoquent
 	protected $componentPath = 'slices';
 	
 	/**
+	 * @var Cache
+	 */
+	protected $cache;
+	
+	/**
+	 * @var bool
+	 */
+	protected $useCache = true;
+	
+	/**
 	 * Constructor
 	 *
 	 * @param array $config
 	 * @param \Galahad\Prismoquent\Support\LinkResolver $resolver
+	 * @param \Galahad\Prismoquent\Support\Cache $cache
 	 * @param string $default_url
 	 */
-	public function __construct(array $config, LinkResolver $resolver, string $default_url)
+	public function __construct(array $config, LinkResolver $resolver, Cache $cache, string $default_url)
 	{
 		$this->config = $config;
 		
 		$this->setResolver($resolver);
 		$this->setDefaultUrl($default_url);
+		$this->setCache($cache);
 	}
 	
 	public function setComponentPath(string $path) : self
 	{
 		$this->componentPath = str_replace(DIRECTORY_SEPARATOR, '.', $path);
+		
+		return $this;
 	}
 	
 	public function setResolver(\Prismic\LinkResolver $resolver) : self
@@ -72,6 +87,24 @@ class Prismoquent
 	public function setDefaultUrl(string $url) : self
 	{
 		$this->default_url = $url;
+		
+		return $this;
+	}
+	
+	public function withoutCaching($disable_caching = true) : self
+	{
+		$this->useCache = !$disable_caching;
+		
+		return $this;
+	}
+	
+	/**
+	 * @param Cache $cache
+	 * @return $this
+	 */
+	public function setCache(Cache $cache) : self
+	{
+		$this->cache = $cache;
 		
 		return $this;
 	}
@@ -125,7 +158,7 @@ class Prismoquent
 				}
 			}
 		}
-			
+		
 		$factory->startComponent($componentPath, $data);
 		echo $this->asHtml($slice);
 		echo $factory->renderComponent();
@@ -143,7 +176,12 @@ class Prismoquent
 				throw new Exception('services.prismic.endpoint is not set');
 			}
 			
-			return Api::get($endpoint, $this->config['api_token'] ?? null);
+			return Api::get(
+				$endpoint,
+				$this->config['api_token'] ?? null,
+				null,
+				$this->useCache ? $this->cache : null
+			);
 		}
 		
 		return $this->api;

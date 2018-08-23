@@ -3,13 +3,13 @@
 namespace Galahad\Prismoquent;
 
 use Galahad\Prismoquent\Http\WebhookController;
+use Galahad\Prismoquent\Support\Cache;
 use Galahad\Prismoquent\Support\HtmlSerializer;
 use Galahad\Prismoquent\Support\LinkResolver;
+use Illuminate\Cache\TaggableStore;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\Compilers\BladeCompiler;
-use Prismic\Api;
-use Prismic\Fragment\SliceInterface;
 
 class PrismicServiceProvider extends ServiceProvider
 {
@@ -26,6 +26,7 @@ class PrismicServiceProvider extends ServiceProvider
 					'endpoint' => env('PRISMIC_ENDPOINT'),
 				]),
 				$app['prismic.resolver'],
+				$app['prismic.cache'],
 				$app['config']->get('app.url', '/')
 			);
 		});
@@ -43,6 +44,18 @@ class PrismicServiceProvider extends ServiceProvider
 		});
 		
 		$this->app->alias('prismic.controller', WebhookController::class);
+		
+		$this->app->bind('prismic.cache', function(Container $app) {
+			$store = $app['cache']->getStore();
+			
+			$repository = $store instanceof TaggableStore
+				? $store->tags('prismoquent')
+				: $store;
+			
+			return new Cache($repository);
+		});
+		
+		$this->app->bind('prismic.cache', Cache::class);
 	}
 	
 	public function boot()
@@ -58,7 +71,7 @@ class PrismicServiceProvider extends ServiceProvider
 	{
 		if ($this->app instanceof \Illuminate\Foundation\Application) {
 			$controller_enabled = false !== $this->app['config']->get('services.prismic.register_controller');
-		
+			
 			if ($controller_enabled && !$this->app->routesAreCached()) {
 				$this->app['router']->post('/glhd/prismoquent/webhook', WebhookController::class);
 			}
