@@ -1,6 +1,6 @@
 <?php
 
-namespace Galahad\Prismoquent\Http;
+namespace Galahad\Prismoquent\Support\Http;
 
 use Galahad\Prismoquent\Events\ApiUpdate;
 use Illuminate\Contracts\Events\Dispatcher;

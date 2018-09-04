@@ -2,9 +2,8 @@
 
 namespace Galahad\Prismoquent;
 
-use Galahad\Prismoquent\Http\WebhookController;
 use Galahad\Prismoquent\Support\Cache;
-use Galahad\Prismoquent\Support\HtmlSerializer;
+use Galahad\Prismoquent\Support\Http\WebhookController;
 use Galahad\Prismoquent\Support\LinkResolver;
 use Illuminate\Cache\TaggableStore;
 use Illuminate\Contracts\Container\Container;
@@ -69,12 +68,10 @@ class PrismicServiceProvider extends ServiceProvider
 	
 	protected function registerRoutes()
 	{
-		if ($this->app instanceof \Illuminate\Foundation\Application) {
-			$controller_enabled = false !== $this->app['config']->get('services.prismic.register_controller');
-			
-			if ($controller_enabled && !$this->app->routesAreCached()) {
-				$this->app['router']->post('/glhd/prismoquent/webhook', WebhookController::class);
-			}
+		$controller_enabled = (false !== $this->app['config']->get('services.prismic.register_controller'));
+		
+		if ($controller_enabled && !$this->app->routesAreCached()) {
+			$this->app['router']->post('/glhd/prismoquent/webhook', WebhookController::class);
 		}
 	}
 	
