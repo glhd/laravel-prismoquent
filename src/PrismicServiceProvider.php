@@ -55,7 +55,7 @@ class PrismicServiceProvider extends ServiceProvider
 			return new Cache($repository);
 		});
 		
-		$this->app->bind('prismic.cache', Cache::class);
+		$this->app->alias('prismic.cache', Cache::class);
 	}
 	
 	public function boot()
