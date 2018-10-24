@@ -10,7 +10,6 @@ use Illuminate\View\Factory;
 use Prismic\Api;
 use Prismic\Fragment\CompositeSlice;
 use Prismic\Fragment\FragmentInterface;
-use Prismic\Fragment\Link\DocumentLink;
 use Prismic\Fragment\SliceInterface;
 
 /**
@@ -129,7 +128,7 @@ class Prismoquent
 		return $fragment->asText();
 	}
 	
-	public function resolveLink(DocumentLink $link)
+	public function resolveLink($link)
 	{
 		return $this->resolver->resolveLink($link);
 	}
