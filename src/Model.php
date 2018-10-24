@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Concerns\HasRelationships;
 use Illuminate\Database\Eloquent\Concerns\HidesAttributes;
 use Illuminate\Database\Eloquent\JsonEncodingException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use JsonSerializable;
 use Prismic\Api;
@@ -669,7 +670,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 			$cast = $this->getCastType($key);
 			
 			if ('html' === $cast) {
-				return $value->asHtml(static::$api->resolver);
+				return new HtmlString($value->asHtml(static::$api->resolver));
 			}
 			
 			if ('text' === $cast) {
