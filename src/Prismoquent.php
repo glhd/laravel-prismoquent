@@ -5,6 +5,7 @@ namespace Galahad\Prismoquent;
 use Galahad\Prismoquent\Support\Cache;
 use Galahad\Prismoquent\Support\HtmlSerializer;
 use Galahad\Prismoquent\Support\LinkResolver;
+use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Factory;
 use Prismic\Api;
@@ -158,7 +159,7 @@ class Prismoquent
 				}
 			}
 			
-			$data['items'] = new Collection($slice->getItems()->getArray());
+			$data['items'] = new Collection($slice->getItems() ? $slice->getItems()->getArray() : []);
 		}
 		
 		$factory->startComponent($componentPath, $data);
