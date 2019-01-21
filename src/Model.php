@@ -554,7 +554,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	 * @param  int  $perPage
 	 * @return $this
 	 */
-	public function setPerPage(int $perPage) : self 
+	public function setPerPage(int $perPage) : self
 	{
 		$this->perPage = $perPage;
 		

@@ -6,6 +6,7 @@ use BadMethodCallException;
 use DateTime;
 use Galahad\Prismoquent\Exceptions\DocumentNotFoundException;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Debug\Dumper;
 use Illuminate\Support\HigherOrderTapProxy;
 use Illuminate\Support\Traits\Macroable;
@@ -674,20 +675,15 @@ class Builder
 		return $this;
 	}
 	
-	public function paginate($per_page = null, $columns = ['*'], $page_name = 'page', $page = null) : Results
+	public function paginate($per_page = null, $page_name = 'page', $page = null) : Results
 	{
 		$page = $page ?: Paginator::resolveCurrentPage($page_name);
 		
 		$per_page = $per_page ?: $this->model->getPerPage();
 		
-		$results = ($total = $this->toBase()->getCountForPagination())
-			? $this->forPage($page, $per_page)->get($columns)
-			: $this->model->newCollection();
+		$this->forPage($page, $per_page);
 		
-		return $this->paginator($results, $total, $per_page, $page, [
-			'path' => Paginator::resolveCurrentPath(),
-			'pageName' => $page_name,
-		]);
+		return $this->get();
 	}
 	
 	/**
