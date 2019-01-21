@@ -82,6 +82,13 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	protected $with = [];
 	
 	/**
+	 * The number of models to return for pagination.
+	 *
+	 * @var int
+	 */
+	protected $perPage = 15;
+	
+	/**
 	 * Create a new Prismoquent model instance.
 	 *
 	 * @param \stdClass $document
@@ -529,6 +536,29 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 	public function getIncrementing()
 	{
 		return false;
+	}
+	
+	/**
+	 * Get the number of models to return per page.
+	 *
+	 * @return int
+	 */
+	public function getPerPage() : int
+	{
+		return $this->perPage;
+	}
+	
+	/**
+	 * Set the number of models to return per page.
+	 *
+	 * @param  int  $perPage
+	 * @return $this
+	 */
+	public function setPerPage(int $perPage) : self 
+	{
+		$this->perPage = $perPage;
+		
+		return $this;
 	}
 	
 	/**

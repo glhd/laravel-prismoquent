@@ -146,9 +146,10 @@ class Prismoquent
 				? $slice->getPrimary()
 				: $slice,
 			'fragments' => new \stdClass(),
+			'items' => new Collection(),
 		];
 		
-		if ($slice->isComposite()) {
+		if ($slice instanceof CompositeSlice) {
 			foreach ($slice->getPrimary()->getFragments() as $key => $fragment) {
 				$data['fragments']->$key = $fragment;
 				
@@ -156,6 +157,8 @@ class Prismoquent
 					$data[$key] = $fragment;
 				}
 			}
+			
+			$data['items'] = new Collection($slice->getItems()->getArray());
 		}
 		
 		$factory->startComponent($componentPath, $data);

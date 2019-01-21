@@ -674,6 +674,22 @@ class Builder
 		return $this;
 	}
 	
+	public function paginate($per_page = null, $columns = ['*'], $page_name = 'page', $page = null) : Results
+	{
+		$page = $page ?: Paginator::resolveCurrentPage($page_name);
+		
+		$per_page = $per_page ?: $this->model->getPerPage();
+		
+		$results = ($total = $this->toBase()->getCountForPagination())
+			? $this->forPage($page, $per_page)->get($columns)
+			: $this->model->newCollection();
+		
+		return $this->paginator($results, $total, $per_page, $page, [
+			'path' => Paginator::resolveCurrentPath(),
+			'pageName' => $page_name,
+		]);
+	}
+	
 	/**
 	 * Find by ID
 	 *
