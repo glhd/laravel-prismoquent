@@ -5,6 +5,7 @@ namespace Galahad\Prismoquent;
 use Galahad\Prismoquent\Support\Cache;
 use Galahad\Prismoquent\Support\HtmlSerializer;
 use Galahad\Prismoquent\Support\LinkResolver;
+use GuzzleHttp\Exception\ClientException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Factory;
@@ -12,6 +13,7 @@ use Prismic\Api;
 use Prismic\Fragment\CompositeSlice;
 use Prismic\Fragment\FragmentInterface;
 use Prismic\Fragment\SliceInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * @mixin \Prismic\Api
@@ -179,7 +181,7 @@ class Prismoquent
 				throw new Exception('services.prismic.endpoint is not set');
 			}
 			
-			return Api::get(
+			$this->api = Api::get(
 				$endpoint,
 				$this->config['api_token'] ?? null,
 				null,
@@ -199,6 +201,18 @@ class Prismoquent
 	 */
 	public function __call($name, $arguments)
 	{
-		return $this->api()->$name(...$arguments);
+		try {
+			return $this->api()->$name(...$arguments);
+		} catch (ClientException $exception) {
+			// If we got a 404, and we're in Preview, let's unset the preview cookie and try again
+			if (404 === $exception->getCode() && $this->api()->inPreview()) {
+				unset($_COOKIE[Api::PREVIEW_COOKIE]);
+				setcookie(Api::PREVIEW_COOKIE, '', time() - 3600);
+				return $this->api()->$name(...$arguments);
+			}
+			
+			// Otherwise, rethro
+			throw $exception;
+		}
 	}
 }
